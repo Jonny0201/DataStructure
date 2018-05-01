@@ -4,7 +4,9 @@
 
 #include "Vector.hpp"
 #include <vector>
+#ifdef OTHER_FUNCTION
 #include <deque>
+#endif
 
 using namespace DataStructure;
 
@@ -592,7 +594,7 @@ bool Vector<T>::find(const Args &...args) const {
     auto begin {findDeque.cbegin()};
     auto end {findDeque.cend()};
     while(begin != end) {
-        if(!*begin) {
+        if(!*begin++) {
             return false;
         }
     }
