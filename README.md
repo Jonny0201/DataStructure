@@ -10,9 +10,7 @@ Data structure is the base of the computer programming.
 
 It helps programmers store and handle data.
 
-----------------------------
-
-### Module
+## Module
 
 This Data Structure written by Jonny in C++ will include :
 
@@ -26,30 +24,22 @@ This Data Structure written by Jonny in C++ will include :
 7. Hash
 8. Heap
 ```
- 
-----------------------------
 
-### How I write?
+## How I write?
 
 I write it by imitating by C++ Standard Template Library and set protection to some functions I think it shouldn't be used casually and now is being protected by `#define`.
 
-----------------------------
-
-### Where you can use?
+## Where you can use?
 
 It can be used in all situations where you are going to write or design a algorithm.
 
-----------------------------
-
-### Which I have added?
+## Which I have added?
 
 The list of data structures next is had been done and you can look throught the codes in my GitHub :
 
 >- Vector : It is designed by array whose behaviour like an array.
 
-----------------------------
-
-### Which is going to be added?
+## Which is going to be added?
 
 The next list is going to be added to my GitHub, it is coming soon :
 
@@ -68,22 +58,20 @@ The next list is going to be added to my GitHub, it is coming soon :
 >- HeapString
 >- BlockingLinkedString
 
-----------------------------
-
-### What evironment I should use?
+## What evironment I should use?
 
 My test evironment :
->macOS 10.13.4
+```
+ macOS 10.13.4
  CLion 2018.1
  Apple LLVM version 9.1.0 (clang-902.0.39.1)
+ ```
 
 The programme is based on C++ 11. So when you compile, you should add the command :
 `-std=c++11`
 
-----------------------------
-
 # LICENSE
 
->Data Structure
+> Project : Data Structure
 
 > Copyright © 2018 [Jonny Charlotte](https://jonny.vip)
