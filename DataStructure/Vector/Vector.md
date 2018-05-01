@@ -164,6 +164,8 @@ Though the Vector is finished and it can be used now, it still exists many probl
 - Code-users cannot use the memory allocator that designed by themselves in this version of Vector.
 - Because of the rough testing, there will be many bugs I still haven't discovered.
 
+I will revise even refactore the code to add new functions and repair the bugs to solve the abovementioned problems.
+
 # LICENSE
 
 > Data Structure
