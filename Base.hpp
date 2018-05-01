@@ -14,7 +14,7 @@ namespace DataStructure {
         typedef T * pointer;
         typedef const T * constPointer;
         typedef const T *const constPointerConstant;
-        typedef T && valueReference;
+        typedef T && rValueReference;
     protected:
         mutable ptrdiff_t allocateSize {50};
         std::allocator<T> array;
