@@ -2,15 +2,15 @@
 
 Just like C++ Standard Template Library, Vector is a multifunction array. All the elements from Vector is stored contiguously which means you can visit element easily but inserting or erasing elements will take more time. If the elements that need to be saved with only a little operating of erasing or inserting and with a lot of operating of visits or changes, then you should consider using Vector to store them.
 
-It is namespaced in namespace `DataStructure`, so if you want to use this, you should add `DataStructure::` at first if you haven't written `using namespace DataStructure;`.
+It is namespaced in namespace `DataStructure`, so if you want to use this, you should add `DataStructure::` at first if you haven't written `using namespace DataStructure`.
 
-It defined in header `<Vector.hpp>` and `<Vector.cpp>`. Because of the attribution of template class, you should include two of the headers by <br />
-`#include <Vector.hpp>`<br />
-`#include <Vector.cpp>`<br />
-or you can include a all-module header by<br />
+It defined in header <Vector.hpp> and <Vector.cpp>. Because of the attribution of template class, you should include two of the headers by
+`#include <Vector.hpp>
+ #include <Vector.cpp>`
+or you can include a all-module header by
 `#include <DataStructure.hpp>`
 
-Till 1st May, 2018, it still haven't been tested seriously. So if you want to include this in the programme yourself, you should test it carefully at first.
+Till 1st May, 2018, it still haven't been tested seriously. So if you want to include this in yourself programme, you should test it carefully at first.
 
 ## Definition
 
@@ -43,17 +43,17 @@ Till 1st May, 2018, it still haven't been tested seriously. So if you want to in
 7. Vector(Vector &&);        //Move constructor.
 8. ~Vector();
 ```
-Because of conflict between functions, those constructor has been deleted :
+Because of conflict of functions, those constructor has been deleted :
 >- `template <typename ...ARGS>
      explicit Vector(ARGS &&...) noexcept;`
 >- `explicit Vector(T &&, size_t = 1) noexcept;`
 >- `explicit Vector(T &&) noexcept;`
 
-  1) Default constructor will make a new Vector that is empty.
-  2) Construct the Vector arguments from `const T &`, the number of element is specified by `size_t`.
-  3) Construct the Vector, the number of element that is default initialized is specified by `size_t`.
+  1) Default constructor will make a new Vector that is empty
+  2) Construct the Vector arguments from `const T &`, the number of element is specified by `size_t`
+  3) Construct the Vector, the number of element that is default initialized is specified by `size_t`
   4) Construct the Vector with a range of elements that provided by a range pointers.
-  5) Construct the Vector with the `std::initializer_list`.
+  5) Construct the Vector with the `std::initializer_list`
 
 ## Operator
 ```
@@ -67,15 +67,17 @@ Because of conflict between functions, those constructor has been deleted :
 8. bool operator==(const Vector &) const;
 9. bool operator!=(const Vector &) const;
 10. explicit operator bool() const;
+11. Vector &operator+();
+12. Vector &operator-();
 ```
 
   3\) The operator is like arrays' indexing operator, it return a reference of indexing elements.<br />
 
-    Tip : For the operator `[]`, you shouldn't use it in a right-value Vector.
+    > Tip : For the operator `[]`, you shouldn't use it in a right-value Vector.
 
-  4\) -- 6\) The comparison operator is different from the operator of C++ Standard Template Library's vector. I will introduce in operator `<` for example. For the other operators, you can analogize from operator `<`. Now assumed that there is a Vector named A and an another Vector named B that is going to compare with Vector A. First, the function will compare the size of two Vectors, that the Vector A has a bigger size will return false as result. If two Vectors has the same size then the function will compare every element, till finded a position that two Vectors have a different element from each other, then compare the element. If Vector A's element is smaller, then return true.<br />
+  4\) -- 6\) The comparison operator is different from the operator of C++ Standard Template Library's vector. I will introduce in operator `<` for example. For the other operators, you can analogize from operator `<`. Now assumed that there is a Vector named A and an another Vector named B that is going to compare with Vector A. First, the function will compare the size of two Vector, that the Vector A has a bigger size will return false as result. If two Vectors has the same size then will compare every element, till find a position that two Vector have a different element from each other, then compare which element. If Vector A's element is smaller, then return true.<br />
 
-    Tip : The type of Vector should support the operator then the overloading operator can work, or will make a compile error.
+    > Tip : The type of Vector should support the operator then the overloading operator will work, or will make a compile error.
 
   8\) -- 9\) Only two Vectors has the same size and every position's element is identical then the operator `==` will return true, else the operator `!=` will return true.<br />
 
@@ -111,11 +113,11 @@ Because of conflict between functions, those constructor has been deleted :
 
 As you can see, what every function should do is like what the name every function holds, I will specially introduce insert()、emplace() and erase() function :<br />
 
-  10\) For the first parameter, you should deliver a `T` type argument that can be a right-value argument or a left-value argument, then set the second parameter as the inserting position. If you want to insert not only one, you can set the last parameter to let the function helps you insert a number of elements that you want to.<br />
+  10\) For the first parameter, you should deliver a `T` type argument that can be a right-value argument or a left-value argument, then set the second parameter as the inserting position. If you want to insert not only one, you can set the last parameter, let the function help you insert a number of elements that you want.<br />
 
-  11\) Different from the previous insert(), this function asks you to diliver only a right-value argument.<br />
+  11\) Different from the previous insert(), this function asks you to diliver only right-value argument.<br />
 
-  16\) -- 18\) You can diliver many arguments to fit the `T` type's construtor. The emplace() asks you to tell the function what the emplace position should be, the others needn't. The emplace-named function will construct the `T` type in the function then insert it. It is what the difference comparing with the function insert().<br />
+  16\) -- 18\) You can diliver many arguments to fit the `T` type's construtor. The emplace() asks you to tell the function what the emplace position should be and the other needn't. The emplace-named function will construct the `T` type in the function then insert it. It is what the difference comparing with the function insert().<br />
 
 
 ## Advanced Function
@@ -164,7 +166,15 @@ Though the Vector is finished and it can be used now, it still exists many probl
 - Code-users cannot use the memory allocator that designed by themselves in this version of Vector.
 - Because of the rough testing, there will be many bugs I still haven't discovered.
 
-I will revise even refactore the code to add new functions and repair the bugs to solve the abovementioned problems.
+## Updates
+
+```
+3rd May, 2018 Update :
+The bug that when two Vectors is equal but the operator `<=` would return false now is fixed.
+Simplify the code of the operators `<=` and `>=` by using the operators `<`, `>` and `=`.
+Add two new unitary operators `+` and `-` for Vector.
+```
+
 
 # LICENSE
 
