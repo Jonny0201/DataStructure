@@ -1,7 +1,3 @@
-//
-// Created by Jonny Charlotte on 29/4/2018.
-//
-
 #ifndef DATA_STRUCTURE_VECTOR_HPP
 #define DATA_STRUCTURE_VECTOR_HPP
 
@@ -61,6 +57,8 @@ namespace DataStructure {
         bool operator==(const Vector &) const;      //Comparison operator. Return true when two Vectors have a identical size and every element is same to another.
         bool operator!=(const Vector &) const;      //Comparison operator. Return the converse result of overloading operator ==.
         explicit operator bool() const;     //Type conversions operator. Return true when there are elements in Vector.
+        Vector &operator-();
+        Vector &operator+();
         using iterator = typename ArrayBase<T>::pointer;
         using constIterator = typename ArrayBase<T>::constPointer;
     public:
