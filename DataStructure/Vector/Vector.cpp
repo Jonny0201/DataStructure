@@ -1,10 +1,6 @@
-//
-// Created by Jonny Charlotte on 29/4/2018.
-//
-
 #include "Vector.hpp"
 #include <vector>
-#ifdef OTHER_FUNCTION
+#ifdef OTHER_FUNTCTION
 #include <deque>
 #endif
 
@@ -149,6 +145,9 @@ Vector<T>::~Vector() {
 }
 template <typename T>
 Vector<T> &Vector<T>::operator=(const Vector &other) {
+    if(&other == this) {
+        return *this;
+    }
     this->free();
     this->allocateSize = other.allocateSize;
     this->cursor = this->first = this->array.allocate(this->allocateSize);
@@ -162,6 +161,9 @@ Vector<T> &Vector<T>::operator=(const Vector &other) {
 }
 template <typename T>
 Vector<T> &Vector<T>::operator=(Vector &&other) noexcept {
+    if(&other == this) {
+        return *this;
+    }
     this->free();
     this->allocateSize = other.allocateSize;
     this->cursor = this->first = this->array.allocate(this->allocateSize);
@@ -231,11 +233,25 @@ bool Vector<T>::operator>=(const Vector &other) const {
 }
 template <typename T>
 bool Vector<T>::operator<=(const Vector &other) const {
-    return !(*this >= other);
+    return *this == other or *this < other;
 }
 template <typename T>
 Vector<T>::operator bool() const {
     return this->first != this->cursor;
+}
+template <typename T>
+Vector<T> &Vector<T>::operator-() {
+    auto cursor {this->first};
+    while(cursor != this->cursor) {
+        //*cursor++ = -*cursor;     //Undefined behaviour in C++.
+        typename std::remove_reference<decltype(*cursor)>::type save {*cursor};
+        *cursor++ = -save;
+    }
+    return *this;
+}
+template <typename T>
+Vector<T> &Vector<T>::operator+() {
+    return *this;
 }
 template <typename T>
 #ifdef POP_GET_NUMBER
