@@ -1,3 +1,7 @@
+//
+// Created by Jonny Charlotte on 29/4/2018.
+//
+
 #include "Vector.hpp"
 #include <vector>
 #ifdef OTHER_FUNTCTION
@@ -51,6 +55,10 @@ void Vector<T>::free() {
     this->first = nullptr;
     this->cursor = nullptr;
     this->end = nullptr;
+}
+template <typename T>
+inline T *Vector<T>::workBeforeInserting(const T *const cursor, size_t size) {
+
 }
 template <typename T>
 Vector<T>::Vector() {
@@ -186,9 +194,9 @@ template <typename T>
 bool Vector<T>::operator==(const Vector &other) const {
     return this->size() == other.size() and [](const Vector &a, const Vector &b) -> bool {
         auto size {a.size()};
-        std::not_equal_to<T> net;
+        std::equal_to<T> net;
         for(auto i {0}; i < size; ++i) {
-            if(net(a[i], b[i])) {
+            if(!net(a[i], b[i])) {
                 return false;
             }
         }
@@ -223,13 +231,7 @@ bool Vector<T>::operator<(const Vector &other) const {
 }
 template <typename T>
 bool Vector<T>::operator>=(const Vector &other) const {
-    if(this->size() != other.size()) {
-        return this->size() > other.size();
-    }
-    return [](const Vector &a, const Vector &b) -> bool {
-        std::greater_equal<T> ge;
-        return ge(a[0], b[0]);
-    }(*this, other);
+    return *this == other or *this > other;
 }
 template <typename T>
 bool Vector<T>::operator<=(const Vector &other) const {
