@@ -184,10 +184,13 @@ Add two new unitary operators `+` and `-` for Vector.
 10. Add the range detecting for `get()`.
 11. The work `shrinkToFit()` should do now is consigned to `resize()`
 12. Add the specific work for `resize()` to fit when `shrinkToFit()` calls him.
-13. Delete the function `template <typename ...Args> bool Vector<T>::find(const Args &...args)` const temporarily, because there is a bug I still cannot fix till now, but it will come back soon!
+13. Delete the function `template <typename ...Args> bool Vector<T>::find(const Args &...args) const` temporarily, because there is a bug I still cannot fix till now, but it will come back soon!
 
 
 **Now all functions has passed the test by build-in type!**
+
+### 8th May, 2018 Update :
+Now the function that is able to find a series of numbers comes back!
 
 
 # LICENSE
