@@ -1,8 +1,5 @@
 #include "Vector.hpp"
 #include <vector>
-#ifdef OTHER_FUNCTION
-#include <deque>
-#endif
 
 using namespace DataStructure;
 
@@ -480,23 +477,14 @@ ptrdiff_t Vector<T>::find(const T &element) const {
     }
     return 0;
 }
-/*template <typename T>
+template <typename T>
 template <typename ...Args>
-bool Vector<T>::find(const Args &...args) const {
-    std::deque<bool> findDeque;
-    findDeque.push_back(this->find(args...));
-    auto begin {findDeque.cbegin()};
-    auto end {findDeque.cend()};
-    if(begin == end) {
-        return false;
+bool Vector<T>::find(const T &element, const Args &...args) const {
+    if(this->find(element)) {
+        return this->find(args...);
     }
-    while(begin != end) {
-        if(!*begin++) {
-            return false;
-        }
-    }
-    return true;
-}*/
+    return false;
+}
 template <typename T>
 Vector<T> Vector<T>::get(unsigned position, size_t n) const {
     if(n >= static_cast<unsigned>(this->cursor - this->first) or static_cast<size_t>(position) + n > this->size()) {
