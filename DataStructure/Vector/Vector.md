@@ -73,8 +73,6 @@ Because of conflict of functions, those constructor has been deleted :
 
   3\) The operator is like arrays' indexing operator, it return a reference of indexing elements.<br />
 
-    > Tip : For the operator `[]`, you shouldn't use it in a right-value Vector.
-
   4\) -- 6\) The comparison operator is different from the operator of C++ Standard Template Library's vector. I will introduce in operator `<` for example. For the other operators, you can analogize from operator `<`. Now assumed that there is a Vector named A and an another Vector named B that is going to compare with Vector A. First, the function will compare the size of two Vector, that the Vector A has a bigger size will return false as result. If two Vectors has the same size then will compare every element, till find a position that two Vector have a different element from each other, then compare which element. If Vector A's element is smaller, then return true.<br />
 
     > Tip : The type of Vector should support the operator then the overloading operator will work, or will make a compile error.
@@ -129,7 +127,7 @@ These functions is what the writer don't want anyone who use casually. If you wa
 ```
 1. ptrdiff_t find(const T &) const;
 2. template <typename ...ARGS>
- bool find(const ARGS &...) const;
+   bool find(const ARGS &...) const; (Deleted temporarily)
 3. Vector<T> get(unsigned, size_t) const;
 4. void resize(size_t);
 5. ptrdiff_t reserve() const;
@@ -137,7 +135,7 @@ These functions is what the writer don't want anyone who use casually. If you wa
 7. void shrinkToFit();
 ```
   1\) Find the provided element in the Vector.<br />
-  2\) Find all elements provided in the Vector, only that all elements exist in Vector will return true.<br />
+  ~~2\) Find all elements provided in the Vector, only that all elements exist in Vector will return true.<br />~~
   3\) Get the number of element whose position is provided by code-users in the Vector.<br />
   4\) Comparing the provided allocateSize and existing allocateSize from the class. Reallocate the memory of the Vector when the provided allocateSize is greater than existing allocateSize from the class.<br />
   5\) Get the information that how many vacancies is in the Vector.<br />
@@ -168,12 +166,28 @@ Though the Vector is finished and it can be used now, it still exists many probl
 
 ## Updates
 
-```
-3rd May, 2018 Update :
+### 3rd May, 2018 Update :
 The bug that when two Vectors is equal but the operator `<=` would return false now is fixed.
 Simplify the code of the operators `<=` and `>=` by using the operators `<`, `>` and `=`.
 Add two new unitary operators `+` and `-` for Vector.
-```
+
+### 8th May, 2018 Update :
+1. Fix the cacography that can lead to compile error from the beginning.
+2. Simplify the codes of functions that need to backup the elements with freeing the old memory allocated by adding a new function named `backup()` and calling it.
+3. Fix the fatal error that the constructor accepting range-iterator hasn't allocated the memory to construct the elements.
+4. Fix the bug that the function named `back()` returns a nonexistent element.
+5. Fix the bug that there is no element in the Vector but calling the function named `at()` or using the operator `[]` would get e illegal element.
+6. Since the emplace functions can throw the exceptions, I removed the `noexcept` from them.
+7. The work of `popFront()`, `pushFront()` and right-value inserting now is consigned to `insert()` or `erase()`
+8. Fix the bug that find a non-first element will lead to a non-break loop.
+9. Now the operator `[]` can be used by a Vector that is right-value.
+10. Add the range detecting for `get()`.
+11. The work `shrinkToFit()` should do now is consigned to `resize()`
+12. Add the specific work for `resize()` to fit when `shrinkToFit()` calls him.
+13. Delete the function `template <typename ...Args> bool Vector<T>::find(const Args &...args)` const temporarily, because there is a bug I still cannot fix till now, but it will come back soon!
+
+
+**Now all functions has passed the test by build-in type!**
 
 
 # LICENSE
