@@ -1,10 +1,6 @@
-//
-// Created by Jonny Charlotte on 29/4/2018.
-//
-
 #include "Vector.hpp"
 #include <vector>
-#ifdef OTHER_FUNTCTION
+#ifdef OTHER_FUNCTION
 #include <deque>
 #endif
 
@@ -18,19 +14,8 @@ template <typename T>
 void Vector<T>::reallocate() {
     /* Use the array of pointer to save the elements. */
     auto size {this->cursor - this->first};
-    T *init;
-    try {
-        init = new T [size];
-    }catch(std::exception &e) {
-        std::cerr << "Failed to allocate memory!" << std::endl;
-        return;
-    }
-    auto reallocateCursor {this->first};
-    for(auto i {0}; reallocateCursor != this->cursor; ++i) {
-        init[i] = *reallocateCursor++;
-    }
+    T *init {this->backup(this->first, size)};
     /* Reallocate the memory. */
-    this->free();
     this->allocateSize *= 2;
     this->allocate();
     /* Put the backup elements to new Vector. */
@@ -38,7 +23,7 @@ void Vector<T>::reallocate() {
         this->array.construct(this->cursor++, init[i]);
     }
     delete[] init;
-    init = reallocateCursor = nullptr;
+    init = nullptr;
 }
 template <typename T>
 inline void Vector<T>::allocate() {
@@ -57,8 +42,22 @@ void Vector<T>::free() {
     this->end = nullptr;
 }
 template <typename T>
-inline T *Vector<T>::workBeforeInserting(const T *const cursor, size_t size) {
-
+T *Vector<T>::backup(T *cursor, size_t size, bool isErase) {
+    T *init;
+    try {
+        init = new T [size];
+    }catch(std::exception &e) {
+        std::cerr << "Fail to allocate the memory!" << std::endl;
+        return nullptr;
+    }
+    if(isErase) {
+        return init;
+    }
+    for(auto i {0}; cursor != this->cursor; ++i) {
+        init[i] = *cursor++;
+    }
+    this->free();
+    return init;
 }
 template <typename T>
 Vector<T>::Vector() {
@@ -117,6 +116,7 @@ Vector<T>::Vector(std::initializer_list<T> elements) {
 }
 template <typename T>
 Vector<T>::Vector(const T *begin, const T *end) {
+    this->allocate();
     auto arrayCursor {begin};
     while(arrayCursor != end) {
         this->array.construct(this->cursor++, *arrayCursor++);
@@ -185,7 +185,7 @@ Vector<T> &Vector<T>::operator=(Vector &&other) noexcept {
 }
 template <typename T>
 T &Vector<T>::operator[](unsigned n) const & {
-    if(n > static_cast<unsigned>(this->cursor - this->first)) {
+    if(n >= static_cast<unsigned>(this->cursor - this->first)) {
         throw std::out_of_range("Error, The array index is out of range!");
     }
     return *(this->first + n);
@@ -286,29 +286,7 @@ void
 #ifdef POP_GET_NUMBER
     auto popNumber {*this->cursor};
 #endif
-    /* Backup the elements to a pointer array. */
-    auto begin {this->first + 1};
-    auto size {this->cursor - this->first - 1};
-    T *init;
-    try {
-        init = new T [size];
-    }catch(std::exception &e) {
-        std::cerr << "Failed to allocate memory!" << std::endl;
-        return;
-    }
-    auto cursor {begin};
-    for(auto i {0}; cursor != this->cursor; ++i) {
-        init[i] = *cursor++;
-    }
-    /* Reallocate the memory. */
-    this->free();
-    this->allocate();
-    /* Put the element except the element that will be popped to the new Vector. */
-    for(auto i {0}; i < size; ++i) {
-        this->array.construct(this->cursor++, init[i]);
-    }
-    delete[] init;
-    init = begin = cursor = nullptr;
+    this->erase(0);
 #ifdef POP_GET_NUMBER
     return popNumber;
 #endif
@@ -327,33 +305,11 @@ void Vector<T>::pushFront(const T &element) {
     if(this->checkFull()) {
         this->reallocate();
     }
-    /* Backup the elements to a pointer array. */
-    auto size {this->cursor - this->first};
-    auto cursor {this->first};
-    T *init;
-    try {
-        init = new T [size];
-    }catch(std::exception &e) {
-        std::cerr << "Failed to allocate memory!" << std::endl;
-        return;
-    }
-    for(auto i {0}; cursor != this->cursor; ++i) {
-        init[i] = *cursor++;
-    }
-    /* Reallocate the memory. */
-    this->free();
-    this->allocate();
-    /* Put the element including the element that will be pushed to the new Vector. */
-    this->array.construct(this->cursor++, element);
-    for(auto i {0}; i < size; ++i) {
-        this->array.construct(this->cursor++, init[i]);
-    }
-    delete[] init;
-    init = cursor = nullptr;
+    this->insert(element, 0);
 }
 template <typename T>
 T Vector<T>::at(unsigned n) const {
-    if(n > this->cursor - this->first) {
+    if(n >= static_cast<unsigned>(this->cursor - this->first)) {
         throw std::out_of_range("Error, The array index is out of range!");
     }
     return static_cast<typename std::remove_reference<decltype((*this)[n])>::type>((*this)[n]);
@@ -377,7 +333,7 @@ const T Vector<T>::front() const {
 }
 template <typename T>
 const T Vector<T>::back() const {
-    return static_cast<typename std::remove_reference<decltype(*this->cursor)>::type>(*this->cursor);
+    return static_cast<typename std::remove_reference<decltype(*this->cursor)>::type>(*(this->cursor - 1));
 }
 template <typename T>
 T const *Vector<T>::getBegin() const {
@@ -412,34 +368,12 @@ T const *Vector<T>::emplaceFront(Args &&...args) noexcept {
     if(this->checkFull()) {
         this->reallocate();
     }
-    /* Backup the elements to a pointer array. */
-    auto size {this->cursor - this->first};
-    auto cursor {this->first};
-    T *init;
-    try {
-        init = new T [size];
-    }catch(std::exception &e) {
-        std::cerr << "Failed to allocate memory!" << std::endl;
-        return nullptr;
-    }
-    for(auto i {0}; cursor != this->cursor; ++i) {
-        init[i] = *cursor++;
-    }
-    /* Reallocate the memory. */
-    this->free();
-    this->allocate();
-    /* Put the element including the element that will be emplaced to the new Vector. */
-    this->array.construct(this->cursor++, std::forward<Args>(args)...);
-    for(auto i {0}; i < size; ++i) {
-        this->array.construct(this->cursor++, init[i]);
-    }
-    delete[] init;
-    init = cursor = nullptr;
+    this->emplace(0, std::forward<Args>(args)...);
     return this->first;     //Return the iterator is needed so that code-users can update the iterator that is created by themselves.
 }
 template <typename T>
 template <typename ...Args>
-T const *Vector<T>::emplace(unsigned position, Args &&...args) noexcept {
+T const *Vector<T>::emplace(unsigned position, Args &&...args) {
     /* Check if there are vacancies so that the new element can be put in. */
     if(position > this->cursor - this->first) {
         throw std::out_of_range("Error, The array index is out of range!");
@@ -450,19 +384,8 @@ T const *Vector<T>::emplace(unsigned position, Args &&...args) noexcept {
         this->reallocate();
     }
     auto size {this->cursor - this->first};
-    auto *cursor {this->first};
-    T *init;
-    try {
-        init = new T [size];
-    }catch(std::exception &e) {
-        std::cerr << "Failed to allocate memory!" << std::endl;
-        return nullptr;
-    }
-    for(auto i {0}; cursor != this->cursor; ++i) {
-        init[i] = *cursor++;
-    }
+    T *init {this->backup(this->first, size)};
     /* Reallocate the memory. */
-    this->free();
     this->allocate();
     /* Put the element including the element that will be emplaced to the new Vector. */
     auto index {0};
@@ -488,19 +411,8 @@ T const *Vector<T>::insert(const T &element, unsigned position, size_t n) {
     }
     /* Backup the elements to a pointer array. */
     auto size {this->cursor - this->first};
-    auto cursor {this->first};
-    T *init;
-    try {
-        init = new T [size];
-    }catch(std::exception &e) {
-        std::cerr << "Failed to allocate memory!" << std::endl;
-        return nullptr;
-    }
-    for(auto i {0}; cursor != this->cursor; ++i) {
-        init[i] = *cursor++;
-    }
+    T *init {this->backup(this->first, size)};
     /* Reallocate the memory. */
-    this->free();
     this->allocate();
     /* Put the element including the element that will be inserted to the new Vector. */
     auto index {0};
@@ -524,38 +436,8 @@ T const *Vector<T>::insert(T &&element, unsigned position) {
     if(position > this->cursor - this->first) {
         throw std::out_of_range("Error, The array index is out of range!");
     }
-    T *returnPointer {nullptr};     //The pointer that is going to be returned.
-    /* Check if there are vacancies so that the new element can be put in. */
-    if(this->checkFull()) {
-        this->reallocate();
-    }
-    /* Backup the elements to a pointer array. */
-    auto size {this->cursor - this->first};
-    auto cursor {this->first};
-    T *init;
-    try {
-        init = new T [size];
-    }catch(std::exception &e) {
-        std::cerr << "Failed to allocate memory!" << std::endl;
-        return nullptr;
-    }
-    for(auto i {0}; cursor != this->cursor; ++i) {
-        init[i] = *cursor++;
-    }
-    /* Reallocate the memory. */
-    this->free();
-    this->allocate();
-    /* Put the element including the element that will be inserted to the new Vector. */
-    auto index {0};
-    for(auto i {0}; i < position; ++i) {
-        this->array.construct(this->cursor++, init[index++]);
-    }
-    returnPointer = this->cursor;
-    this->array.construct(this->cursor++, std::move(element));
-    for(auto i {index}; i < size; ++i) {
-        this->array.construct(this->cursor++, init[index++]);
-    }
-    return returnPointer;       //Return the iterator is needed so that code-users can update the iterator that is created by themselves.
+    T temp {std::move(element)};
+    return this->insert(temp, position);
 }
 template <typename T>
 T const *Vector<T>::erase(unsigned position, size_t n) {
@@ -564,14 +446,8 @@ T const *Vector<T>::erase(unsigned position, size_t n) {
     }
     /* Backup the elements to a pointer array. */
     auto size {this->cursor - this->first - n};
+    T *init {this->backup(this->first, size, true)};
     auto cursor {this->first};
-    T *init;
-    try {
-        init = new T [size];
-    }catch(std::exception &e) {
-        std::cerr << "Failed to allocate memory!" << std::endl;
-        return nullptr;
-    }
     auto index {0};
     for(auto i {0}; i < position; ++i) {
         init[index++] = *cursor++;
@@ -598,39 +474,55 @@ template <typename T>
 ptrdiff_t Vector<T>::find(const T &element) const {
     auto cursor {this->first};
     while(cursor != this->cursor) {
-        if(*cursor == element) {
-            return static_cast<int>(cursor - this->first) + 1;
+        if(*cursor++ == element) {
+            return static_cast<int>(cursor - this->first);
         }
     }
     return 0;
 }
-template <typename T>
+/*template <typename T>
 template <typename ...Args>
 bool Vector<T>::find(const Args &...args) const {
     std::deque<bool> findDeque;
-    findDeque.emplace_back(this->find(args)...);
+    findDeque.push_back(this->find(args...));
     auto begin {findDeque.cbegin()};
     auto end {findDeque.cend()};
+    if(begin == end) {
+        return false;
+    }
     while(begin != end) {
         if(!*begin++) {
             return false;
         }
     }
     return true;
-}
+}*/
 template <typename T>
 Vector<T> Vector<T>::get(unsigned position, size_t n) const {
-    auto start {this->first + position - 1};
+    if(n >= static_cast<unsigned>(this->cursor - this->first) or static_cast<size_t>(position) + n > this->size()) {
+        throw std::out_of_range("Error, The array index is out of range!");
+    }
+    auto start {this->first + position};
     auto end {start + n};
     return Vector<T>(start, end);
 }
 template <typename T>
-void Vector<T>::resize(size_t n) {
-    if(n < this->allocateSize) {
+void Vector<T>::resize(size_t n, bool shrinkToFitCalling) {
+    if(n < this->allocateSize and !shrinkToFitCalling) {
         return;
     }
     this->allocateSize = n;
+    /* Use the array of pointer to save the elements. */
+    auto size {this->cursor - this->first};
+    T *init {this->backup(this->first, size)};
+    /* Reallocate the memory. */
     this->allocate();
+    /* Put the backup elements to new Vector. */
+    for(auto i {0}; i < size; ++i) {
+        this->array.construct(this->cursor++, init[i]);
+    }
+    delete[] init;
+    init = nullptr;
 }
 template <typename T>
 ptrdiff_t Vector<T>::reserve() const {
@@ -642,8 +534,7 @@ ptrdiff_t Vector<T>::capacity() const {
 }
 template <typename T>
 void Vector<T>::shrinkToFit() {
-    this->allocateSize = this->cursor - this->first;
-    this->reallocate();
+    this->resize(this->cursor - this->first, true);
 }
 #endif
 #ifdef DEBUG_DATA_STRUCTURE_FOR_VECTOR
