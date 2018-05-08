@@ -25,6 +25,7 @@ namespace DataStructure {
         void reallocate() override;     //If the Memory allocator is filled with the elements, then allot a bigger memory.
         void free() override;       //Free the memory holding.
         void allocate() override;       //Allocate the memory by this->allocateSize.
+        T *backup(T *, size_t, bool = false);       //Backup the elements before inserting or erasing.
     public:
         Vector();       //Default constructor.
         explicit Vector(size_t, const T &);     //Explicit constructor, calling it for create a number of initial data.
@@ -86,7 +87,7 @@ namespace DataStructure {
         T const *getBegin() const;      //Get the constant-iterator from the beginning.
         T const *getEnd() const;        //Get the constant-iterator from the ending.
         template <typename ...ARGS>
-        T const *emplace(unsigned, ARGS &&...) noexcept;        //Emplace a non-construct element to a specific position.
+        T const *emplace(unsigned, ARGS &&...);        //Emplace a non-construct element to a specific position.
         template <typename ...ARGS>
         T const *emplaceBack(ARGS &&...) noexcept;      //Emplace a non-construct element to the last of Vector.
         template <typename ...ARGS>
@@ -98,10 +99,10 @@ namespace DataStructure {
 #ifdef OTHER_FUNCTION       //Those function shouldn't be used casually
     public:
         ptrdiff_t find(const T &) const;        //Find a element whether is in the Vector or not.
-        template <typename ...ARGS>
-        bool find(const ARGS &...) const;       //Find a number of elements whether is in the Vector or not.
+        /*template <typename ...ARGS>
+        bool find(const ARGS &...) const;       //Find a number of elements whether is in the Vector or not.*/
         Vector<T> get(unsigned, size_t) const;      //Get a part of elements from Vector.
-        void resize(size_t);        //Reallocate memory by a number that specified by code-users. If the number is less than this->allocateSize, it will do nothing.
+        void resize(size_t, bool = false);        //Reallocate memory by a number that specified by code-users. If the number is less than this->allocateSize, it will do nothing.
         ptrdiff_t reserve() const;      //Get the number of reserved memory.
         ptrdiff_t capacity() const;     //Get the capability of Vector.
         void shrinkToFit();     //Free the memory that is only allocated.
