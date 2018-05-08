@@ -99,8 +99,8 @@ namespace DataStructure {
 #ifdef OTHER_FUNCTION       //Those function shouldn't be used casually
     public:
         ptrdiff_t find(const T &) const;        //Find a element whether is in the Vector or not.
-        /*template <typename ...ARGS>
-        bool find(const ARGS &...) const;       //Find a number of elements whether is in the Vector or not.*/
+        template <typename ...ARGS>
+        bool find(const T &, const ARGS &...) const;       //Find a number of elements whether is in the Vector or not.
         Vector<T> get(unsigned, size_t) const;      //Get a part of elements from Vector.
         void resize(size_t, bool = false);        //Reallocate memory by a number that specified by code-users. If the number is less than this->allocateSize, it will do nothing.
         ptrdiff_t reserve() const;      //Get the number of reserved memory.
