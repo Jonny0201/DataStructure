@@ -37,7 +37,7 @@ I set protection to some functions I think it shouldn't be used casually, it is 
 
 `Allocator` plays a virtual role in all container. The responsibility of `Allocator` is to manage the memory.
 
-The foremost thing I think is that the allocator should manage the memory by itself rather than by class users. The designer of `Allocator` shouldn't let class users deallocate the memory allocated by `Allocator`, which means the deconstructor of `Allocator` is responsible for deallocate the memory.
+The foremost thing I think is that the allocator should manage the memory by itself rather than by class users. The designer of `Allocator` shouldn't let class users deallocate the memory allocated by `Allocator`, which means the deconstructor of `Allocator` is responsible for deallocating the memory.
 
 There should be four attributions for `Allocator` : `first`, `cursor`, `end` and `size`.
 
