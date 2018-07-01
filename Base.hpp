@@ -2,37 +2,69 @@
 #define DATA_STRUCTURE_BASE_HPP
 
 #include <iostream>
+#include "TypeTraits.hpp"
+#include <cmath>
 
 namespace DataStructure {
-    template <typename T>
-    class ArrayBase {
+    template <typename T> class Allocator;
+    template <typename T, typename Alloc>
+    struct ArrayBase {
     public:
-        typedef T type;
-        typedef const T constType;
-        typedef T & reference;
-        typedef const T & constReference;
-        typedef T * pointer;
-        typedef const T * constPointer;
-        typedef const T *const constPointerConstant;
-        typedef T && rValueReference;
+        using differenceType = ptrdiff_t;
+        using sizeType = size_t;
+        using valueType = T;
+        using constType = const T;
+        using reference = T &;
+        using constReference = const T &;
+        using pointer = T *;
+        using constPointer = const T *;
+        using constPointerConstant = const T *const;
+        using rightValueReference = T &&;
+        using allocator = Alloc;
     protected:
-        mutable ptrdiff_t allocateSize {50};
-        std::allocator<T> array;
-        T *first {nullptr};
-        T *cursor {nullptr};
-        T *end {nullptr};
-        virtual bool checkFull() const = 0;
-        virtual void reallocate() = 0;
-        virtual void free() = 0;
-        virtual void allocate() = 0;
+        mutable sizeType allocateSize {50};
+        Alloc array;
+    protected:
+        ArrayBase() : array() {}
+        ArrayBase(const ArrayBase &other) : allocateSize(other.allocateSize) {
+            this->construct();
+            this->copy(other);
+        }
+        ArrayBase(ArrayBase &&other) noexcept : array(std::move(other.array)), allocateSize(std::move(other.allocateSize)) {
+            other.array = Allocator<valueType>();
+        }
+        void checkSize(sizeType size) {
+            const auto times {static_cast<double>(size) / static_cast<double>(this->allocateSize)};
+            if(times <= 1) {
+                return;
+            }
+            this->allocateSize *= std::ceil(times);
+            this->array.resize(static_cast<typename Allocator<T>::sizeType>(this->allocateSize));
+        }
+        void construct() {
+            this->array.allocate(static_cast<typename Allocator<T>::sizeType>(this->allocateSize));
+        }
+        void copy(const ArrayBase &other) {
+            auto end {other.array.getCursor()};
+            for(auto cursor {other.array.getFirst()}; cursor not_eq end; ++cursor) {
+                this->array.construct(this->array.getCursor(), *cursor);
+            }
+            end = nullptr;
+        }
+        friend void swap(ArrayBase &a, ArrayBase &b) {
+            using std::swap;
+            swap(a.allocateSize, b.allocateSize);
+            swap(a.array, b.array);
+        }
     };
-    
+
+    /* Allocator */
     template <typename T>
     class Allocator final {
     public:
         using differenceType = ptrdiff_t;
         using sizeType = size_t;
-        using type = T;
+        using valueType = T;
         using constType = const T;
         using reference = T &;
         using constReference = const T &;
@@ -61,16 +93,13 @@ namespace DataStructure {
             }(this->first, this->end, p)) {
                 throw BadPointer("The argument pointer isn't allocated by Allocate!");
             }
-            if(this->cursor == p) {
-                ++this->cursor;
-            }
         }
         void reallocate() {
             const auto backupSize {this->cursor - this->first};
             if(not backupSize) {
                 return;
             }
-            auto backup {new type[backupSize]};
+            auto backup {static_cast<pointer>(::operator new (sizeof(valueType) * backupSize))};
             auto backupCursor {this->first};
             for(auto i {0}; backupCursor not_eq this->cursor; ++i) {
                 backup[i] = *backupCursor++;
@@ -80,13 +109,13 @@ namespace DataStructure {
             for(auto i {0}; i < backupSize; ++i) {
                 *this->cursor++ = *(backup + i);
             }
-            delete[] backup;
+            ::operator delete (backup);
             backup = backupCursor = nullptr;
         }
     private:
         class BadPointer final : public std::out_of_range {
         public:
-            explicit constexpr BadPointer(const char *error) : out_of_range(error) {}
+            explicit BadPointer(const char *error) : out_of_range(error) {}
             explicit BadPointer(const std::string &error) : out_of_range(error) {}
         };
     public:
@@ -94,11 +123,14 @@ namespace DataStructure {
 
         }
         Allocator(const Allocator &other) : size(other.size), first(other.first), cursor(other.cursor), end(other.end) {
-            if(&other not_eq this) {
-                this->free();
-            }
+
         }
-        Allocator(Allocator &&) = delete;
+        Allocator(Allocator &&other) noexcept :
+                size(std::move(other.size)), first(std::move(other.first)),
+                cursor(std::move(other.cursor)), end(std::move(other.end)) {
+            other.size = 0;
+            other.first = other.cursor = other.end = nullptr;
+        }
         Allocator &operator=(const Allocator &other) & {
             if(&other == this) {
                 return *this;
@@ -110,12 +142,34 @@ namespace DataStructure {
             this->end = other.end;
             return *this;
         }
-        Allocator &operator=(Allocator &&) = delete;
+        Allocator &operator=(Allocator &&other) & noexcept {
+            if(&other == this) {
+                return *this;
+            }
+            this->free();
+            this->size = std::move(other.size);
+            this->first = std::move(other.first);
+            this->cursor = std::move(other.cursor);
+            this->end = std::move(other.end);
+            other.size = 0;
+            other.first = other.cursor = other.end = nullptr;
+            return *this;
+        }
         ~Allocator() {
             this->free();
         }
         explicit operator bool() const {
             return this->size > 0;
+        }
+        friend void swap(Allocator &a, Allocator &b) {
+            if(&a == &b) {
+                return;
+            }
+            using std::swap;
+            swap(a.size, b.size);
+            swap(a.first, b.first);
+            swap(a.cursor, b.cursor);
+            swap(a.end, b.end);
         }
         pointer allocate(sizeType size) & {
             this->size = size;
@@ -123,7 +177,7 @@ namespace DataStructure {
                 this->reallocate();
                 return this->first;
             }
-            this->first = static_cast<type *>(::operator new(static_cast<size_t>(sizeof(type) * this->size)));
+            this->first = static_cast<valueType *>(::operator new(static_cast<size_t>(sizeof(valueType) * this->size)));
             if(!this->first) {
                 throw BadPointer("Fail to allocate the memory!");
             }
@@ -133,21 +187,22 @@ namespace DataStructure {
         }
         pointer construct(referenceToPointer p, constReference object) & {
             this->checkPointer(this->first, this->end, p);
-            new (p++) type(object);
+            new (p++) valueType(object);
             return p;
         }
         template <typename ...Args>
         pointer construct(referenceToPointer p, const Args &...args) & {
             this->checkPointer(this->first, this->end, p);
-            new (p++) type(args...);
+            new (p++) valueType(args...);
             return p;
         }
         pointer construct(referenceToPointer p, rightValueReference object) & {
             this->checkPointer(this->first, this->end, p);
-            new (p++) type(std::move(object));
+            new (p++) valueType(std::move(object));
             return p;
         }
         pointer destroy(pointer p) & {
+            this->checkPointer(this->first, this->end, p);
             using t = typename removePointer<pointer>::type;
             p->~t();
             if([&]() -> bool {
@@ -159,15 +214,10 @@ namespace DataStructure {
             return p;
         }
         bool full() const & {
-            return not(this->empty());
+            return this->cursor == this->end;
         }
         bool empty() const {
-            for(auto cursor {this->first}; cursor not_eq this->cursor; ++cursor) {
-                if(*cursor) {
-                    return false;
-                }
-            }
-            return true;
+            return this->first == this->cursor;
         }
         sizeType getSize() const & {
             return this->size;
@@ -175,14 +225,18 @@ namespace DataStructure {
         pointer getFirst() const & {
             return this->first;
         }
+        pointer getCursor() const & {
+            return this->cursor;
+        }
         referenceToPointer getCursor() & {
             return this->cursor;
         }
         pointer getEnd() const & {
             return this->end;
         }
-#ifdef OTHER_FUNCTION
-    public:
+        void resetSize(sizeType size) {
+            this->size = size;
+        }
         pointer resize(sizeType size) & {
             if(this->size > size) {
                 return this->first;
@@ -200,6 +254,8 @@ namespace DataStructure {
             this->reallocate();
             return this->first;
         }
+#ifdef OTHER_FUNCTION
+    public:
         BadPointer getBadPointer(const char *error) {
             return BadPointer(error);
         }
