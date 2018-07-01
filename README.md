@@ -35,23 +35,23 @@ I set protection to some functions I think it shouldn't be used casually, it is 
 
 #### `Allocator`
 
-`Allocator` plays a virtual role in all container. The responsibility of `Allocator` is to manage the memory.
+`Allocator` plays a virtual role in all containers. The responsibility of `Allocator` is to manage the memory.
 
 The foremost thing I think is that the allocator should manage the memory by itself rather than by class users. The designer of `Allocator` shouldn't let class users deallocate the memory allocated by `Allocator`, which means the deconstructor of `Allocator` is responsible for deallocating the memory.
 
 There should be four attributions for `Allocator` : `first`, `cursor`, `end` and `size`.
 
-`Allocator` firstly allocate a large of memory, `first` is the first of the memory pointer, `end` is the end of the memory pointer and `size` for the size of memory that has been allocated. `cursor` is a pointer that always points to the next memory address that will be used.Due to the discrepany of access method with STL's `std::allocator`, so you should design three functions to get memory pointers.
+`Allocator` firstly allocates a large of memory, `first` is the first of the memory pointer, `end` is the end of the memory pointer and `size` for the size of memory that has been allocated. `cursor` is a pointer that always points to the next memory address that will be used. Due to the discrepany of access method with STL's `std::allocator`, so you should design three functions to get memory pointers.
 
-The copy constructor and move constructor should NOT be deleted in `Allocator`, the two constructors should copy or move all things that is from other `Allocator`s.
+The copy constructor and move constructor should NOT be delete constructors in `Allocator`, the two constructors should copy or move all things that is from other Allocators.
 
 `Allocator` also should hold the copy assign operator and move assign operator.
 
-Apart from what has mentioned above, these functions are the basic of `Allocator` : allocate function, construct function and destroy function. These functions is similar to the function from STL's `std::allocator`.
+Apart from what has mentioned above, these functions are the basic of `Allocator` : `allocate`, `construct` and `destroy`. These functions is similar to the functions from STL's `std::allocator`.
 
-These attributions and functions is a must for `Allocator`, otherwise your `Allocator` cannot be compatible with the container from Data Structure.
+These attributions and functions is a must for `Allocator`, otherwise your `Allocator` cannot be compatible with the containers from Data Structure.
 
-If you want your `Allocator` more powerful, you can design these functions : `resize` function for resize the size of allocated memory and `shrinkToFit` function for shrink the memory that hasn't been used.
+If you want your `Allocator` more powerful, you can design these two functions : `resize` for resize the size of allocated memory and `shrinkToFit` for shrink the memory that hasn't been used.
 
 ## Completed
 
