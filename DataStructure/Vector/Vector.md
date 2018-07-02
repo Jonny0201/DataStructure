@@ -1,71 +1,90 @@
 # ::DataStructure::Vector
 
-Just like C++ Standard Template Library, Vector is a multifunction array. All the elements from Vector is stored contiguously which means you can visit element easily but inserting or erasing elements will take more time. If the elements that need to be saved with only a little operating of erasing or inserting and with a lot of operating of visits or changes, then you should consider using Vector to store them.
+### Vector Refactored!
 
-It is namespaced in namespace `DataStructure`, so if you want to use this, you should add `DataStructure::` at first if you haven't written `using namespace DataStructure`.
+Just like C++ Standard Template Library, `Vector` is a multifunction array. All the elements from `Vector` is stored contiguously which means you can visit element easily but inserting or erasing elements will be time-consuming. If the elements that need to be saved with only a little operating of erasing or inserting and with a lot of operating of visits or changes, then you should consider using Vector to store them.
 
-It defined in header <Vector.hpp> and <Vector.cpp>. Because of the attribution of template class, you should include two of the headers by
-`#include <Vector.hpp>
- #include <Vector.cpp>`
-or you can include a all-module header by
-`#include <DataStructure.hpp>`
+It is namespaced in namespace `DataStructure`, so if you want to use this, you should add `DataStructure::` at first if you haven't declare `DataStructure` by `using namespace DataStructure`.
 
-Till 1st May, 2018, it still haven't been tested seriously. So if you want to include this in yourself programme, you should test it carefully at first.
+The refactoring is to simply for class users. So now you needn't include two files like
+`#include "Vector.hpp"` and `#include "Vector.cpp"`. It is in the one file now `Vector.hpp`.
+
+Till 2nd July, 2018, it still haven't been tested seriously (I tested `int` and `simple` class like
+
+```cpp
+struct s {
+    int a;
+    char b;
+};
+```
+
+So if you want to include this in yourself programme, you should test it carefully at first.
+
+This time I add an `Allocator` for Vector not only relying on STL's `std::allocator`. However, what you should pay attention is that there are an abundance of discrepancies between the Allocator `Vector` need and STL's `std::allocator`, which suggests C++'s standard allocator cannnot be compatible with `DataStructure::Vector`. If you want Vector use your allocator, then you should read the portion for `Allocator` from DataStructure's documentation carefully and try your best to read how I write `DataStructure::Allocator`.
+
+I also delete the comments due to the reason that I have described all details in this documentation for `DataStructure::Vector`. I think my coding style is nice for reading cooperating with the documentation.
 
 ## Definition
 
-`template <typename T>
- class Vector;`
+`template <typename T, typename Alloc = DataStructure::Allocator<T>>`
+
+ `class Vector final;`
+
+`final` prohibits anyone inherit from this class.
 
 
 ## Member types
 
->- `type` <-> `T`
+>- `valueType` <-> `T`
 >- `constType` <-> `const T`
 >- `reference` <-> `T &`
 >- `constReference` <-> `const T &`
 >- `pointer` <-> `T *`
 >- `constPointer` <-> `const T *`
 >- `constPointerConstant` <-> `const T *const`
->- `rValueReference` <-> `T &&`
->- `iterator` <-> `pointer`
->- `constIterator` <-> `constPointer`
+>- `rightValueReference` <-> `T &&`
+>- `iterator` <-> `DataStructure::Vector::Iterator`
+>- `constIterator` <-> `const DataStructure::Vector::Iterator`
+>- `iteratorReference` <-> `DataStructure::Vector::Iterator &`
+>- `allocator` <-> `Alloc`
+>- `differenceType` <-> `ptrdiff_t`
+>- `sizeType` <-> `size_t`
 
 ## Constructor and Destructor
 
+```cpp
+1. Vector();        //Default constructor.
+2. explicit Vector(sizeType, constReference);
+3. explicit Vector(sizeType);
+4. Vector(iterator, iterator);
+5. Vector(pointer , pointer);
+6. Vector(std::initializer_list<valueType>);
+7. explicit Vector(const Alloc &);
+8. Vector(const Vector &);        //Copy constructor.
+9. Vector(Vector &&) noexcept;        //Move constructor.
 ```
-1. Vector();       //Default constructor.
-2. explicit Vector(size_t, const T &);
-3. explicit Vector(size_t);
-4. Vector(const T *, const T *);
-5. Vector(std::initializer_list<T>);
-6. Vector(cosnt Vector &);        //Copy constructor.
-7. Vector(Vector &&);        //Move constructor.
-8. ~Vector();
-```
-Because of conflict of functions, those constructor has been deleted :
->- `template <typename ...ARGS>
-     explicit Vector(ARGS &&...) noexcept;`
->- `explicit Vector(T &&, size_t = 1) noexcept;`
->- `explicit Vector(T &&) noexcept;`
 
-  1) Default constructor will make a new Vector that is empty
-  2) Construct the Vector arguments from `const T &`, the number of element is specified by `size_t`
-  3) Construct the Vector, the number of element that is default initialized is specified by `size_t`
-  4) Construct the Vector with a range of elements that provided by a range pointers.
-  5) Construct the Vector with the `std::initializer_list`
+  1) Default constructor. Constructs a new empty `Vector`.
+  2) Constructs the `Vector` with count copies of elements with value.
+  3) Constructs the `Vector` with count copies of elements with default value `valueType()`.
+  4) Constructs the `Vector` with a range of elements that is provided by a range iterator.
+  5) Constructs the `Vector` with a range of elements that is provided by a range pointer.
+  6) Constructs the `Vector` with the `std::initializer_list`.
+  7) Constructs the `Vector` with other allocator.
+  8) Copy constructor. Constructs the `Vector` with other `Vector` by copying the elements from other `Vector`.
+  9) Move constructor. Constructs the `Vector` with other `Vector` by moving the elements from other `Vector`.
 
 ## Operator
-```
+```cpp
 1. Vector &operator=(const Vector &);        //Copy assignment operator.
 2. Vector &operator=(Vector &&) noexcept;        //Move assignment operator.
-3. T &operator[](unsigned n) const &;
+3. reference operator[](differenceType) const &;
 4. bool operator<(const Vector &) const;
 5. bool operator<=(const Vector &) const;
 6. bool operator>(const Vector &) const;
 7. bool operator>=(const Vector &) const;
 8. bool operator==(const Vector &) const;
-9. bool operator!=(const Vector &) const;
+9. bool operator not_eq(const Vector &) const;        //not_eq <-> !=
 10. explicit operator bool() const;
 11. Vector &operator+();
 12. Vector &operator-();
@@ -82,87 +101,119 @@ Because of conflict of functions, those constructor has been deleted :
   10\) It is common to use the operator `bool()` in the condition statements to judge whether the Vector is empty or not.
 
 ## Function
-```
-1. T popBack();
+```cpp
+1. valueType popBack();        //Returning value depends on macro.
 2. void popBack();
-3. T popFront();
+3. valueType popFront();        //Returning value depends on macro.
 4. void popFront();
-5. void pushBack(const T &);
-6. void pushFront(const T &);
-7. T at(unsigned n) const;
-8. bool isEmpty() const;
+5. void pushBack(constReference);
+6. void pushFront(constReference);
+7. valueType at(differenceType) const;
+8. bool empty() const;
 9. void clear();
-10. T const *insert(const T &, unsigned, size_t = 1);
-11. T const *insert(T &&, unsigned);
-12. const T *const getConstantBegin() const;
-13. const T *const getConstantEnd() const;
-14. T const *getBegin() const;
-15. T const *getEnd() const;
-16. template <typename ...ARGS>
-     T const *emplace(unsigned, ARGS &...) noexcept;
-17. template <typename ...ARGS>
-     T const *emplaceBack(ARGS &&...) noexcept;
-18. template <typename ...ARGS>
-     T const *emplaceFront(ARGS &&...) noexcept;
-19. size_t size() const;
-20. const T front() const;
-21. const T back() const;
+10. iterator insert(constReference, differenceType, sizeType = 1);
+11. iterator insert(constReference, constIterator, sizeType = 1);
+12. template <typename OutputIterator>
+    iterator insert(constIterator, OutputIterator, OutputIterator);
+13. iterator insert(constIterator, std::initializer_list<valueType>);
+14. template <typename ...Args>
+    iterator emplace(differenceType, Args &&...) noexcept;
+15. template <typename ...Args>
+    iterator emplaceBack(Args &&...) noexcept;
+16. template <typename ...Args>
+    iterator emplaceFront(Args &&...) noexcept;
+17. iterator erase(differenceType, sizeType = 1);
+18. iterator erase(constIterator);
+20. sizeType size() const;
+21. valueType front() const;
+22. valueType back() const;
+23. iterator begin() const;
+24. iterator end() const;
+25. constIterator constBegin() const;
+26. constIterator constEnd() const;
 ```
 
-As you can see, what every function should do is like what the name every function holds, I will specially introduce insert()、emplace() and erase() function :<br />
+As you can see, what every function does is like what the name every function holds.
 
-  10\) For the first parameter, you should deliver a `T` type argument that can be a right-value argument or a left-value argument, then set the second parameter as the inserting position. If you want to insert not only one, you can set the last parameter, let the function help you insert a number of elements that you want.<br />
+> Refactoring : <br />
+    > - `insert` and `emplace` will return `iterator` instead of pointer, which is safer. <br />
+    > - `isEmpty` is renamed to `empty`. <br />
+    > - `getBegin`, `getEnd` is renamed to `begin` and `end`. You can put `Vector` in **Range-For** (C++ 11). <br />
 
-  11\) Different from the previous insert(), this function asks you to diliver only right-value argument.<br />
+## Iterator for `Vetcor`
 
-  16\) -- 18\) You can diliver many arguments to fit the `T` type's construtor. The emplace() asks you to tell the function what the emplace position should be and the other needn't. The emplace-named function will construct the `T` type in the function then insert it. It is what the difference comparing with the function insert().<br />
+The iterator from `Vector` is a random access iterator.
+
+Operator supports :
+```cpp
+1. reference operator*() const;
+2. pointer operator->() const;
+3. Iterator &operator++();
+4. Iterator operator++(int);
+5. Iterator &operator--();
+6. Iterator operator--(int);
+7. reference operator[](differenceType);
+8. bool operator==(const Iterator &) const;
+9. bool operator not_eq(const Iterator &) const;        //not_eq <-> !=
+10. bool operator<(const Iterator &) const;
+11. bool operator<=(const Iterator &) const;
+12. bool operator>(const Iterator &) const;
+13. bool operator>=(const Iterator &) const;
+14. Iterator operator+(differenceType) const;
+15. Iterator operator-(differenceType) const;
+16. friend differenceType operator-(const Iterator &, const Iterator &);
+```
+
+<br /> Tip : function ~~differenceType operator-(const Iterator &) const;~~ has been deleted.
 
 
 ## Advanced Function
 
-These functions is what the writer don't want anyone who use casually. If you want to call these functions, you should hold a macro variable named `OTHER_FUNCTION` :
+These functions is what I don't want anyone who uses casually. If you want to call these functions, you should declare a macro variable named `OTHER_FUNCTION` :
 
 `#define OTHER_FUNCTION`
 
+```cpp
+1. iterator find(constReference) const;
+2. template <typename ...Args>
+   bool find(constReference, const Args &...) const;
+3. Vector get(differenceType, sizeType) const;
+4. void resize(sizeType);
+5. sizeType reserve() const;
+6. void shrinkToFit();
+7. sizeType capacity() const;
 ```
-1. ptrdiff_t find(const T &) const;
-2. template <typename ...ARGS>
-   bool find(const ARGS &...) const; (Deleted temporarily)
-3. Vector<T> get(unsigned, size_t) const;
-4. void resize(size_t);
-5. ptrdiff_t reserve() const;
-6. ptrdiff_t capacity() const;
-7. void shrinkToFit();
-```
-  1\) Find the provided element in the Vector.<br />
-  ~~2\) Find all elements provided in the Vector, only that all elements exist in Vector will return true.<br />~~
-  3\) Get the number of element whose position is provided by code-users in the Vector.<br />
-  4\) Comparing the provided allocateSize and existing allocateSize from the class. Reallocate the memory of the Vector when the provided allocateSize is greater than existing allocateSize from the class.<br />
-  5\) Get the information that how many vacancies is in the Vector.<br />
-  6\) Get the information that how many position altogether is in the Vector.<br />
-  7\) Free the memory that occupied by vacancies.
+  1\) Find the element in the `Vector` (Refactoring : Returning iterator instead of returning position).<br />
+  2\) Find all elements in the `Vector`, only that all elements exist in Vector will return true.<br />
+  3\) Get the element list and put the list into `Vector` then return it.<br />
+  4\) Comparing the provided `allocateSize` and existing `allocateSize` from the class. Reallocate the memory of the `Vector` when the provided `allocateSize` is greater than existing `allocateSize` from the class (Refactoring : The function's work has delegated to `Allocator`).<br />
+  5\) Get the information that how many vacancies are in the `Vector`.<br />
+  6\) Free the memory that occupied by vacancies and hasn't been used (Refactoring : The function's work has delegated to `Allocator`).
+  7\) Get the information that how many positions altogether are in the `Vector` (Refactoring : The function's work has delegated to `Allocator`).<br />
 
 ## Debug Function
 
-These function should NOT be used in production environment. Besides, these functions will destroy the encapsulation of class.If you want to call these functions, you should hold a macro variable named `DEBUG_DATA_STRUCTURE_FOR_VECTOR` :
+These function should NOT be used in production environment. Besides, these functions will destroy the encapsulation of class.If you want to call these functions, you should declare a macro variable named `DEBUG_DATA_STRUCTURE_FOR_VECTOR` :
 
 `#define DEBUG_DATA_STRUCTURE_FOR_VECTOR`
 
-```
-std::allocator<T> *getInwardAllocator() const;
-T *getInwardFirst() const;
-T *getInwardCursor() const;
-T *getInwardEnd() const;
+```cpp
+1. allocator &getAllocator() const;
+2. auto getFirst() const -> decltype(this->array.getFirst());
+3. auto getCursor() const -> decltype(this->array.getCursor());
+4. auto getEnd() const -> decltype(this->array.getEnd());
+5. sizeType &getAllocateSize() const;
 ```
 
 ## Problem Exists
 
-Though the Vector is finished and it can be used now, it still exists many problems :
+Though the `Vector` is finished and it can be used now, it still exists many problems :
 
-- There are many duplicated code in the function insert()、emplace() and erase().
-- The iterator of the Vector is pointers, which is unsafe.
-- Code-users cannot use the memory allocator that designed by themselves in this version of Vector.
-- Because of the rough testing, there will be many bugs I still haven't discovered.
+- Constructor `Vector(iterator, iterator);` should accept any iterator including pointers not only the iterators from `Vector`.
+- There isn't a reserve iterator in `Vector`.
+- Any unknown error.
+
+If you find any error in the `Vector`, please tell me!
 
 ## Updates
 
@@ -187,10 +238,18 @@ Add two new unitary operators `+` and `-` for Vector.
 13. Delete the function `template <typename ...Args> bool Vector<T>::find(const Args &...args) const` temporarily, because there is a bug I still cannot fix till now, but it will come back soon!
 
 
-**Now all functions has passed the test by build-in type!**
+    **Now all functions has passed the test by build-in type!**
 
 ### 8th May, 2018 Update :
 Now the function that is able to find a series of numbers comes back!
+
+### 2nd July, 2018 Refactor:
+1. Add Allocator.
+2. Add Iterator.
+3. Rename some functions.
+4. Add new `insert` overload functions, `emplace` overload functions, `erase` overload functions
+5. Change the old code which is out for new `Vector`.
+6. Clear the types. All function's returning types and parameter types use the type from `Vector`
 
 
 # LICENSE
