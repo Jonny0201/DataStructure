@@ -74,7 +74,7 @@ If you want your `Allocator` more powerful, you can design these two functions :
 >- HeapString
 >- BlockingLinkedString
 
-## Evironment
+## Environment
 
  ```
  macOS 10.13.5
