@@ -103,7 +103,7 @@ namespace DataStructure {
             friend differenceType operator-(const Iterator &a, const Iterator &b) {
                 return a.iterator - b.iterator;
             }
-            reference operator[](sizeType n) const {
+            reference operator[](differenceType n) {
                 return this->iterator[n];
             }
 #ifdef DEBUG_DATA_STRUCTURE_FOR_VECTOR_ITERATOR
@@ -124,9 +124,9 @@ namespace DataStructure {
         using constPointerConstant = const T *const;
         using rightValueReference = T &&;
         using iterator = Iterator;
-        using constIterator = const iterator;
-        using iteratorReference = iterator &;
-        using constIteratorReference = const iterator &;
+        using constIterator = const Iterator;
+        using iteratorReference = Iterator &;
+        using constIteratorReference = const Iterator &;
         using allocator = Alloc;
     private:
         pointer backup(differenceType, iteratorReference, sizeType &);
@@ -181,8 +181,8 @@ namespace DataStructure {
         valueType back() const;
         iterator insert(constReference, differenceType, sizeType = 1);
         iterator insert(constReference, constIterator, sizeType = 1);
-        template <typename InputIterator>
-        iterator insert(constIterator, InputIterator, InputIterator);
+        template <typename OutputIterator>
+        iterator insert(constIterator, OutputIterator, OutputIterator);
         iterator insert(constIterator, std::initializer_list<valueType>);
         template <typename ...Args>
         iterator emplace(differenceType, Args &&...) noexcept;
@@ -573,7 +573,7 @@ typename DataStructure::Vector<T, Alloc>::iterator
 DataStructure::Vector<T, Alloc>::erase(constIterator begin, constIterator end) {
     auto size {end - begin};
     auto index {begin - this->begin()};
-    return this->erase(index, size);
+    return this->erase(index, static_cast<sizeType>(size));
 }
 template <typename T, typename Alloc>
 inline typename DataStructure::Vector<T, Alloc>::iterator DataStructure::Vector<T, Alloc>::begin() const {
