@@ -1,9 +1,7 @@
-#ifndef DATA_STRUCTURE_BASE_HPP
-#define DATA_STRUCTURE_BASE_HPP
-
 #include <iostream>
 #include "TypeTraits.hpp"
 #include <cmath>
+#include "Exception.hpp"
 
 namespace DataStructure {
     template <typename T> class Allocator;
@@ -22,7 +20,7 @@ namespace DataStructure {
         using rightValueReference = T &&;
         using allocator = Alloc;
     protected:
-        mutable sizeType allocateSize {50};
+        mutable sizeType allocateSize {64};
         Alloc array;
     protected:
         ArrayBase() : array() {}
@@ -30,7 +28,8 @@ namespace DataStructure {
             this->construct();
             this->copy(other);
         }
-        ArrayBase(ArrayBase &&other) noexcept : array(std::move(other.array)), allocateSize(std::move(other.allocateSize)) {
+        ArrayBase(ArrayBase &&other) noexcept :
+                array(std::move(other.array)), allocateSize(std::move(other.allocateSize)) {
             other.array = Allocator<valueType>();
         }
         void checkSize(sizeType size) {
@@ -51,7 +50,7 @@ namespace DataStructure {
             }
             end = nullptr;
         }
-        friend void swap(ArrayBase &a, ArrayBase &b) {
+        friend inline void swap(ArrayBase &a, ArrayBase &b) {
             using std::swap;
             swap(a.allocateSize, b.allocateSize);
             swap(a.array, b.array);
@@ -73,6 +72,10 @@ namespace DataStructure {
         using constPointerConstant = const T *const;
         using rightValueReference = T &&;
         using referenceToPointer = pointer &;
+    public:
+        enum {
+            ALIGN = 8
+        };
     private:
         sizeType size;
         pointer first;
@@ -82,7 +85,7 @@ namespace DataStructure {
             while(this->first not_eq this->cursor) {
                 this->destroy(this->cursor - 1);
             }
-            operator delete (this->first);
+            ::operator delete (this->first);
             this->first = this->cursor = this->end = nullptr;
         }
         void checkPointer(pointer first, pointer end, pointer p) {
@@ -99,7 +102,7 @@ namespace DataStructure {
             if(not backupSize) {
                 return;
             }
-            auto backup {static_cast<pointer>(::operator new (sizeof(valueType) * backupSize))};
+            auto backup {reinterpret_cast<pointer>(::operator new (sizeof(valueType) * backupSize))};
             auto backupCursor {this->first};
             for(auto i {0}; backupCursor not_eq this->cursor; ++i) {
                 backup[i] = *backupCursor++;
@@ -113,16 +116,32 @@ namespace DataStructure {
             backup = backupCursor = nullptr;
         }
     private:
-        class BadPointer final : public std::out_of_range {
+        class BadPointer final : public RuntimeException {
         public:
-            explicit BadPointer(const char *error) : out_of_range(error) {}
-            explicit BadPointer(const std::string &error) : out_of_range(error) {}
+            explicit BadPointer(const char *error) : RuntimeException(error) {}
+            explicit BadPointer(const std::string &error) : RuntimeException(error) {}
         };
+        class BadAllocate final : public Exception {
+        public:
+            explicit BadAllocate(const char *error) : Exception(error) {}
+            explicit BadAllocate(const std::string &error) : Exception(error) {}
+        };
+    public:
+        static void *operator new(sizeType size) {
+            if(void *p {std::malloc(size)}) {
+                return p;
+            }
+            throw BadAllocate("Bad Allocate!");
+        }
+        static void operator delete(void *p) noexcept {
+            std::free(p);
+        }
     public:
         constexpr Allocator() : size(0), first(nullptr), cursor(nullptr), end(nullptr) {
 
         }
-        Allocator(const Allocator &other) : size(other.size), first(other.first), cursor(other.cursor), end(other.end) {
+        Allocator(const Allocator &other) :
+                size(other.size), first(other.first), cursor(other.cursor), end(other.end) {
 
         }
         Allocator(Allocator &&other) noexcept :
@@ -177,7 +196,9 @@ namespace DataStructure {
                 this->reallocate();
                 return this->first;
             }
-            this->first = static_cast<valueType *>(::operator new(static_cast<size_t>(sizeof(valueType) * this->size)));
+            this->first = reinterpret_cast<valueType *>(
+                    ::operator new(static_cast<size_t>(sizeof(valueType) * this->size))
+            );
             if(!this->first) {
                 throw BadPointer("Fail to allocate the memory!");
             }
@@ -234,7 +255,7 @@ namespace DataStructure {
         pointer getEnd() const & {
             return this->end;
         }
-        void resetSize(sizeType size) {
+        void resetSize(sizeType size) & {
             this->size = size;
         }
         pointer resize(sizeType size) & {
@@ -263,6 +284,12 @@ namespace DataStructure {
             return BadPointer(error);
         }
 #endif
+    };
+
+    template <typename T>
+    struct Node {
+        Node *next;
+        T data;
     };
 }
 
