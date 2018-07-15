@@ -53,13 +53,15 @@ These attributions and functions is a must for `Allocator`, otherwise your `Allo
 
 If you want your `Allocator` more powerful, you can design these two functions : `resize` for resize the size of allocated memory and `shrinkToFit` for shrink the memory that hasn't been used.
 
+Finally, Allocator should hold two overload functions : `operator new` and `operator delete`. I suggest there can be a memory pool in the allocator.
+
 ## Completed
 
 >- Vector : It is designed by array whose behaviour like an array.
+>- ForwardList : The list whose iterator only can go forward.
 
 ## Coming Soon...
 
->- ForwardLinkedList
 >- StaticList
 >- CircleLinkedList
 >- Stack
