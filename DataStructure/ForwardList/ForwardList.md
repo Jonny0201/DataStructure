@@ -25,9 +25,9 @@ If the `List` is going to inherit from `ForwardList`, then the ForwardList shoul
 >- `constPointer` <-> `const T *`
 >- `constPointerConstant` <-> `const T *const`
 >- `rightValueReference` <-> `T &&`
->- `iterator` <-> `DataStructure::Vector::Iterator`
->- `constIterator` <-> `const DataStructure::Vector::Iterator`
->- `iteratorReference` <-> `DataStructure::Vector::Iterator &`
+>- `iterator` <-> `DataStructure::ForwardList::Iterator`
+>- `constIterator` <-> `const DataStructure::ForwardList::Iterator`
+>- `iteratorReference` <-> `DataStructure::ForwardList::Iterator &`
 >- `allocator` <-> `Alloc`
 >- `differenceType` <-> `ptrdiff_t`
 >- `sizeType` <-> `size_t`
@@ -72,7 +72,7 @@ If the `List` is going to inherit from `ForwardList`, then the ForwardList shoul
 
   3\) -- 6\) The comparison operator is different from the operator of C++ Standard Template Library's `std::forward_list`. I will introduce in operator `<` for example. For the other operators, you can analogize from operator `<`. Now assumed that there is a `ForwardList` named A and an another `ForwardList` named B that is going to compare with `ForwardList` A. First, the function will compare the size of two `ForwardList`s, that the `ForwardList` A has a bigger size will return false as result. If two `ForwardList`s have the same sizes then will compare every element, till find a position that two `ForwardList`s have a different element from each other, then compare which element. If `ForwardList` A's element is smaller, then return true.<br />
 
-    > Tip : The type of Vector should support the operator then the overloading operators will work, or will make a compile error.
+    > Tip : The type of ForwardList should support the operator then the overloading operators will work, or will make a compile error.
 
   7\) -- 8\) Only two `ForwardList`s have the same sizes and every position's element is identical then the operator `==` will return true, else the operator `!=` will return true.
 
