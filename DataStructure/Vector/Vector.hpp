@@ -14,10 +14,10 @@ namespace DataStructure {
         class Iterator final {
         public:
             using valueType = T;
-            using reference = valueType &;
-            using pointer = valueType *;
-            using constPointer = const pointer;
-            using constReference = const valueType &;
+            using reference = T &;
+            using pointer = T *;
+            using constPointer = const T *;
+            using constReference = const T &;
             using differenceType = ptrdiff_t;
             using sizeType = size_t;
         private:
@@ -47,10 +47,10 @@ namespace DataStructure {
             ~Iterator() {
                 this->iterator = nullptr;
             }
-            reference operator*() const {
+            reference operator*() {
                 return *this->iterator;
             }
-            pointer operator->() const {
+            pointer operator->() {
                 return this->iterator;
             }
             Iterator &operator++() {
@@ -59,7 +59,7 @@ namespace DataStructure {
             }
             Iterator operator++(int) {
                 Iterator temp {*this};
-                ++this->iterator;
+                ++*this;
                 return temp;
             }
             Iterator &operator--() {
@@ -68,7 +68,7 @@ namespace DataStructure {
             }
             Iterator operator--(int) {
                 Iterator temp {*this};
-                --this->iterator;
+                --*this;
                 return temp;
             }
             bool operator==(const Iterator &other) const {
@@ -107,7 +107,7 @@ namespace DataStructure {
                 return this->iterator[n];
             }
 #ifdef DEBUG_DATA_STRUCTURE_FOR_VECTOR_ITERATOR
-            T *getIterator() const {
+            T *getIterator() {
                 return this->iterator;
             }
 #endif
@@ -137,7 +137,7 @@ namespace DataStructure {
 #endif
     public:
         Vector();
-        explicit Vector(sizeType, constReference);
+        Vector(sizeType, constReference);
         explicit Vector(sizeType);
         Vector(iterator, iterator);
         Vector(pointer , pointer);
@@ -181,8 +181,8 @@ namespace DataStructure {
         valueType back() const;
         iterator insert(constReference, differenceType, sizeType = 1);
         iterator insert(constReference, constIterator, sizeType = 1);
-        template <typename OutputIterator>
-        iterator insert(constIterator, OutputIterator, OutputIterator);
+        template <typename ForwardIterator>
+        iterator insert(constIterator, ForwardIterator, ForwardIterator);
         iterator insert(constIterator, std::initializer_list<valueType>);
         template <typename ...Args>
         iterator emplace(differenceType, Args &&...) noexcept;
@@ -210,11 +210,11 @@ namespace DataStructure {
 #endif
 #ifdef DEBUG_DATA_STRUCTURE_FOR_VECTOR
         public:
-        allocator &getAllocator() const;
-        auto getFirst() const -> decltype(this->array.getFirst());
-        auto getCursor() const -> decltype(this->array.getCursor());
-        auto getEnd() const -> decltype(this->array.getEnd());
-        sizeType &getAllocateSize() const;
+        allocator *&getAllocator();
+        auto &getFirst() -> decltype(this->array.getFirst());
+        auto &getCursor() -> decltype(this->array.getCursor());
+        auto &getEnd() -> decltype(this->array.getEnd());
+        sizeType &getAllocateSize();
 #endif
     };
 }
@@ -237,7 +237,7 @@ DataStructure::Vector<T, Alloc>::backup(differenceType index, iteratorReference 
     start = iterator(this->array.getFirst() + index);
     iterator end {this->array.getCursor()};
     backupSize = static_cast<sizeType>(end - start);
-    auto backupArray {static_cast<pointer>(::operator new (sizeof(valueType) * backupSize))};
+    auto backupArray {reinterpret_cast<pointer>(::operator new (sizeof(valueType) * backupSize))};
     for(auto i {0}; start not_eq end; ++i) {
         backupArray[i] = *start++;
     }
@@ -271,6 +271,9 @@ template <typename T, typename Alloc>
 DataStructure::Vector<T, Alloc>::Vector(iterator begin, iterator end) : ArrayBase<T, Alloc>() {
     this->construct();
     auto size {end - begin};
+    if(size < 0) {
+        throw OutOfRange("The begin-iterator is a bad-iterator!");
+    }
     this->checkSize(static_cast<sizeType>(size));
     while(begin not_eq end) {
         this->array.construct(this->array.getCursor(), *begin++);
@@ -404,6 +407,9 @@ void
 #endif
 DataStructure::Vector<T, Alloc>::popFront() {
 #ifdef POP_GET_OBJECT
+    if(not(this->size())) {
+        throw EmptyForwardList("The Forward List is empty!");
+    }
     auto returnNumber {(*this)[0]};
 #endif
     this->erase(0);
@@ -419,6 +425,9 @@ void
 #endif
 DataStructure::Vector<T, Alloc>::popBack() {
 #ifdef POP_GET_OBJECT
+    if(not(this->size())) {
+        throw EmptyForwardList("The Forward List is empty!");
+    }
     auto returnNumber {(*this)[this->size() - 1]};
 #endif
     this->erase(this->size() - 1);
@@ -435,7 +444,8 @@ void DataStructure::Vector<T, Alloc>::pushBack(constReference value) {
     this->array.construct(this->array.getCursor(), value);
 }
 template <typename T, typename Alloc>
-typename DataStructure::Vector<T, Alloc>::valueType DataStructure::Vector<T, Alloc>::at(differenceType index) const {
+typename DataStructure::Vector<T, Alloc>::valueType
+DataStructure::Vector<T, Alloc>::at(differenceType index) const {
     return (*this)[index];
 }
 template <typename T, typename Alloc>
@@ -492,10 +502,13 @@ DataStructure::Vector<T, Alloc>::insert(constReference value, constIterator posi
     return this->insert(value, index, number);
 }
 template <typename T, typename Alloc>
-template <typename InputIterator>
+template <typename ForwardIterator>
 typename DataStructure::Vector<T, Alloc>::iterator
-DataStructure::Vector<T, Alloc>::insert(constIterator position, InputIterator begin, InputIterator end) {
-    auto size {end - begin};
+DataStructure::Vector<T, Alloc>::insert(constIterator position, ForwardIterator begin, ForwardIterator end) {
+    auto size {0};
+    for(auto i {begin}; i not_eq end; ++i) {
+        ++size;
+    }
     this->checkSize(size + this->size());
     auto index {position - iterator(this->array.getFirst())};
     iterator start(nullptr);
@@ -539,14 +552,16 @@ DataStructure::Vector<T, Alloc>::emplace(differenceType index, Args &&...args) n
 }
 template <typename T, typename Alloc>
 template <typename ...Args>
-typename DataStructure::Vector<T, Alloc>::iterator DataStructure::Vector<T, Alloc>::emplaceBack(Args &&...args) noexcept {
+typename DataStructure::Vector<T, Alloc>::iterator
+DataStructure::Vector<T, Alloc>::emplaceBack(Args &&...args) noexcept {
     this->checkSize(this->size() + 1);
     this->array.construct(this->array.getCursor(), std::forward<Args>(args)...);
     return iterator(this->array.getCursor() - 2);
 }
 template <typename T, typename Alloc>
 template <typename ...Args>
-typename DataStructure::Vector<T, Alloc>::iterator DataStructure::Vector<T, Alloc>::emplaceFront(Args &&...args) noexcept {
+typename DataStructure::Vector<T, Alloc>::iterator
+DataStructure::Vector<T, Alloc>::emplaceFront(Args &&...args) noexcept {
     return this->emplace(0, std::forward<Args>(args)...);
 }
 template <typename T, typename Alloc>
@@ -564,7 +579,8 @@ DataStructure::Vector<T, Alloc>::erase(differenceType index, sizeType size) {
     return it + index;
 }
 template <typename T, typename Alloc>
-typename DataStructure::Vector<T, Alloc>::iterator DataStructure::Vector<T, Alloc>::erase(constIterator position) {
+typename DataStructure::Vector<T, Alloc>::iterator
+DataStructure::Vector<T, Alloc>::erase(constIterator position) {
     auto index {position - this->begin()};
     return this->erase(index);
 }
@@ -584,16 +600,19 @@ inline typename DataStructure::Vector<T, Alloc>::iterator DataStructure::Vector<
     return iterator(this->array.getCursor());
 }
 template <typename T, typename Alloc>
-inline typename DataStructure::Vector<T, Alloc>::constIterator DataStructure::Vector<T, Alloc>::constBegin() const {
+inline typename DataStructure::Vector<T, Alloc>::constIterator
+DataStructure::Vector<T, Alloc>::constBegin() const {
     return this->begin();
 }
 template <typename T, typename Alloc>
-inline typename DataStructure::Vector<T, Alloc>::constIterator DataStructure::Vector<T, Alloc>::constEnd() const {
+inline typename DataStructure::Vector<T, Alloc>::constIterator
+DataStructure::Vector<T, Alloc>::constEnd() const {
     return this->end();
 }
 #ifdef OTHER_FUNCTION
 template <typename T, typename Alloc>
-typename DataStructure::Vector<T, Alloc>::iterator DataStructure::Vector<T, Alloc>::find(constReference value) const {
+typename DataStructure::Vector<T, Alloc>::iterator
+DataStructure::Vector<T, Alloc>::find(constReference value) const {
     auto end {this->end()};
     for(auto it {this->begin()}; it not_eq end; ++it) {
         if(*it == value) {
@@ -627,6 +646,7 @@ DataStructure::Vector<T, Alloc> DataStructure::Vector<T, Alloc>::get(differenceT
 }
 template <typename T, typename Alloc>
 inline void DataStructure::Vector<T, Alloc>::resize(sizeType size) {
+    size = (size + Alloc::ALIGN - 1) & ~(Alloc::ALIGN - 1);
     this->array.resize(size);
 }
 template <typename T, typename Alloc>
@@ -644,23 +664,23 @@ inline typename DataStructure::Vector<T, Alloc>::sizeType DataStructure::Vector<
 #endif
 #ifdef DEBUG_DATA_STRUCTURE_FOR_VECTOR
 template <typename T, typename Alloc>
-inline typename DataStructure::Vector<T, Alloc>::allocator &DataStructure::Vector<T, Alloc>::getAllocator() const {
+inline typename DataStructure::Vector<T, Alloc>::allocator *&DataStructure::Vector<T, Alloc>::getAllocator() {
     return this->array;
 }
 template <typename T, typename Alloc>
-inline auto DataStructure::Vector<T, Alloc>::getFirst() const -> decltype(this->array.getFirst()) {
+inline auto &DataStructure::Vector<T, Alloc>::getFirst() -> decltype(this->array.getFirst()) {
     return this->array.getFirst();
 }
 template <typename T, typename Alloc>
-inline auto DataStructure::Vector<T, Alloc>::getCursor() const -> decltype(this->array.getCursor()) {
+inline auto &DataStructure::Vector<T, Alloc>::getCursor() -> decltype(this->array.getCursor()) {
     return this->array.getCursor();
 }
 template <typename T, typename Alloc>
-inline auto DataStructure::Vector<T, Alloc>::getEnd() const -> decltype(this->array.getEnd()) {
+inline auto &DataStructure::Vector<T, Alloc>::getEnd() -> decltype(this->array.getEnd()) {
     return this->array.getEnd();
 }
 template <typename T, typename Alloc>
-typename DataStructure::Vector<T, Alloc>::sizeType &DataStructure::Vector<T, Alloc>::getAllocateSize() const {
+typename DataStructure::Vector<T, Alloc>::sizeType &DataStructure::Vector<T, Alloc>::getAllocateSize() {
     return this->allocateSize;
 }
 #endif
