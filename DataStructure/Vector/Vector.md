@@ -54,7 +54,7 @@ I also delete the comments due to the reason that I have described all details i
 
 ```cpp
 1. Vector();        //Default constructor.
-2. explicit Vector(sizeType, constReference);
+2. Vector(sizeType, constReference);
 3. explicit Vector(sizeType);
 4. Vector(iterator, iterator);
 5. Vector(pointer , pointer);
@@ -92,13 +92,13 @@ I also delete the comments due to the reason that I have described all details i
 
   3\) The operator is like arrays' indexing operator, it return a reference of indexing elements.<br />
 
-  4\) -- 6\) The comparison operator is different from the operator of C++ Standard Template Library's vector. I will introduce in operator `<` for example. For the other operators, you can analogize from operator `<`. Now assumed that there is a Vector named A and an another Vector named B that is going to compare with Vector A. First, the function will compare the size of two Vector, that the Vector A has a bigger size will return false as result. If two Vectors has the same size then will compare every element, till find a position that two Vector have a different element from each other, then compare which element. If Vector A's element is smaller, then return true.<br />
+  4\) -- 7\) The comparison operator is different from the operator of C++ Standard Template Library's `std::vector`. I will introduce in operator `<` for example. For the other operators, you can analogize from operator `<`. Now assumed that there is a `Vector` named A and an another `Vector` named B that is going to compare with `Vector` A. First, the function will compare the size of two `Vector`, that the `Vector` A has a bigger size will return false as result. If two `Vector`s have the same sizes then will compare every element, till find a position that two `Vector`s have a different element from each other, then compare which element. If `Vector` A's element is smaller, then return true.<br />
 
-    > Tip : The type of Vector should support the operator then the overloading operator will work, or will make a compile error.
+    > Tip : The type of Vector should support the operator then the overloading operators will work, or will make a compile error.
 
-  8\) -- 9\) Only two Vectors has the same size and every position's element is identical then the operator `==` will return true, else the operator `!=` will return true.<br />
+  8\) -- 9\) Only two `Vector`s have the same sizes and every position's element is identical then the operator `==` will return true, else the operator `!=` will return true.<br />
 
-  10\) It is common to use the operator `bool()` in the condition statements to judge whether the Vector is empty or not.
+  10\) It is common to use the operator `bool()` in the condition statements to judge whether the `Vector` is empty or not.
 
 ## Function
 ```cpp
@@ -113,8 +113,8 @@ I also delete the comments due to the reason that I have described all details i
 9. void clear();
 10. iterator insert(constReference, differenceType, sizeType = 1);
 11. iterator insert(constReference, constIterator, sizeType = 1);
-12. template <typename OutputIterator>
-    iterator insert(constIterator, OutputIterator, OutputIterator);
+12. template <typename ForwardIterator>
+    iterator insert(constIterator, ForwardIterator, ForwardIterator);
 13. iterator insert(constIterator, std::initializer_list<valueType>);
 14. template <typename ...Args>
     iterator emplace(differenceType, Args &&...) noexcept;
@@ -185,7 +185,7 @@ These functions is what I don't want anyone who uses casually. If you want to ca
 ```
   1\) Find the element in the `Vector` (Refactoring : Returning iterator instead of returning position).<br />
   2\) Find all elements in the `Vector`, only that all elements exist in Vector will return true.<br />
-  3\) Get the element list and put the list into `Vector` then return it.<br />
+  3\) Get the element list and put the list into a new `Vector` then return it.<br />
   4\) Comparing the provided `allocateSize` and existing `allocateSize` from the class. Reallocate the memory of the `Vector` when the provided `allocateSize` is greater than existing `allocateSize` from the class (Refactoring : The function's work has delegated to `Allocator`).<br />
   5\) Get the information that how many vacancies are in the `Vector`.<br />
   6\) Free the memory that occupied by vacancies and hasn't been used (Refactoring : The function's work has delegated to `Allocator`).
