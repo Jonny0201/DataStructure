@@ -1,3 +1,6 @@
+#ifndef DATA_STRUCTURE_BASE_HPP
+#define DATA_STRUCTURE_BASE_HPP
+
 #include <iostream>
 #include "TypeTraits.hpp"
 #include <cmath>
@@ -48,7 +51,6 @@ namespace DataStructure {
             for(auto cursor {other.array.getFirst()}; cursor not_eq end; ++cursor) {
                 this->array.construct(this->array.getCursor(), *cursor);
             }
-            end = nullptr;
         }
         friend inline void swap(ArrayBase &a, ArrayBase &b) {
             using std::swap;
@@ -59,7 +61,7 @@ namespace DataStructure {
 
     /* Allocator */
     template <typename T>
-    class Allocator final {
+    class Allocator {
     public:
         using differenceType = ptrdiff_t;
         using sizeType = size_t;
@@ -76,28 +78,25 @@ namespace DataStructure {
         enum {
             ALIGN = 8
         };
-    private:
+    protected:
         sizeType size;
         pointer first;
         pointer cursor;
         pointer end;
-        void free() {
+        virtual void free() noexcept {
             while(this->first not_eq this->cursor) {
                 this->destroy(this->cursor - 1);
             }
             ::operator delete (this->first);
-            this->first = this->cursor = this->end = nullptr;
         }
-        void checkPointer(pointer first, pointer end, pointer p) {
+        virtual void checkPointer(pointer first, pointer end, pointer p) const {
             if([](pointer first, pointer end, pointer p) -> bool {
-                std::less<pointer> less;
-                std::greater_equal<pointer> ge;
-                return ge(p, end) and less(p, first);
+                return std::greater_equal<pointer>()(p, end) and std::less<pointer>()(p, first);
             }(this->first, this->end, p)) {
                 throw BadPointer("The argument pointer isn't allocated by Allocate!");
             }
         }
-        void reallocate() {
+        virtual void reallocate() {
             const auto backupSize {this->cursor - this->first};
             if(not backupSize) {
                 return;
@@ -113,7 +112,6 @@ namespace DataStructure {
                 *this->cursor++ = *(backup + i);
             }
             ::operator delete (backup);
-            backup = backupCursor = nullptr;
         }
     private:
         class BadPointer final : public RuntimeException {
@@ -174,10 +172,10 @@ namespace DataStructure {
             other.first = other.cursor = other.end = nullptr;
             return *this;
         }
-        ~Allocator() {
+        virtual ~Allocator() {
             this->free();
         }
-        explicit operator bool() const {
+        virtual explicit operator bool() const {
             return this->size > 0;
         }
         friend void swap(Allocator &a, Allocator &b) {
@@ -190,14 +188,14 @@ namespace DataStructure {
             swap(a.cursor, b.cursor);
             swap(a.end, b.end);
         }
-        pointer allocate(sizeType size) & {
+        virtual pointer allocate(sizeType size) & {
             this->size = size;
             if(this->first) {
                 this->reallocate();
                 return this->first;
             }
             this->first = reinterpret_cast<valueType *>(
-                    ::operator new(static_cast<size_t>(sizeof(valueType) * this->size))
+                    ::operator new (static_cast<size_t>(sizeof(valueType) * this->size))
             );
             if(!this->first) {
                 throw BadPointer("Fail to allocate the memory!");
@@ -206,42 +204,44 @@ namespace DataStructure {
             this->end = this->first + this->size;
             return this->first;
         }
-        pointer construct(referenceToPointer p, constReference object) & {
+        virtual pointer construct(referenceToPointer p, constReference object) & {
             this->checkPointer(this->first, this->end, p);
             new (p++) valueType(object);
             return p;
         }
         template <typename ...Args>
-        pointer construct(referenceToPointer p, const Args &...args) & {
+        pointer construct(referenceToPointer p, Args &&...args) & {
             this->checkPointer(this->first, this->end, p);
-            new (p++) valueType(args...);
+            new (p++) valueType(std::forward<Args>(args)...);
             return p;
         }
-        pointer construct(referenceToPointer p, rightValueReference object) & {
+        virtual pointer construct(referenceToPointer p, rightValueReference object) & {
             this->checkPointer(this->first, this->end, p);
             new (p++) valueType(std::move(object));
             return p;
         }
-        pointer destroy(pointer p) & {
+        virtual pointer destroy(pointer p) & {
             this->checkPointer(this->first, this->end, p);
-            using t = typename removePointer<pointer>::type;
-            p->~t();
+            p->~valueType();
             if([&]() -> bool {
-                std::greater_equal<pointer> ge;
-                return ge(this->cursor - 1, this->first) and this->cursor - 1 == p;
+                return std::greater_equal<pointer>()(this->cursor - 1, this->first) and
+                       this->cursor - 1 == p;
             }()) {
                 --this->cursor;
             }
             return p;
         }
-        bool full() const & {
+        virtual bool full() const & {
             return this->cursor == this->end;
         }
-        bool empty() const {
+        virtual bool empty() const {
             return this->first == this->cursor;
         }
-        sizeType getSize() const & {
+        sizeType maxSize() const {
             return this->size;
+        }
+        virtual sizeType usedSize() const {
+            return this->cursor - this->first;
         }
         pointer getFirst() const & {
             return this->first;
@@ -285,11 +285,254 @@ namespace DataStructure {
         }
 #endif
     };
-
     template <typename T>
-    struct Node {
-        Node *next;
-        T data;
+    class AllocatorReverse : public Allocator<T> {
+        friend inline void swap(AllocatorReverse<T> &a, AllocatorReverse<T> &b) {
+            swap(dynamic_cast<Allocator<T> &>(a), dynamic_cast<Allocator<T> &>(b));
+        }
+    public:
+        using differenceType = long;
+        using sizeType = unsigned long;
+        using valueType = T;
+        using constType = const T;
+        using reference = T &;
+        using constReference = const T &;
+        using pointer = T *;
+        using constPointer = const T *;
+        using constPointerConstant = const T *const;
+        using rightValueReference = T &&;
+        using referenceToPointer = pointer &;
+    private:
+        class BadPointer final : public RuntimeException {
+        public:
+            explicit BadPointer(const char *error) : RuntimeException(error) {}
+            explicit BadPointer(const std::string &error) : RuntimeException(error) {}
+        };
+        class BadAllocate final : public Exception {
+        public:
+            explicit BadAllocate(const char *error) : Exception(error) {}
+            explicit BadAllocate(const std::string &error) : Exception(error) {}
+        };
+    private:
+        class ReverseIterator final : public RandomAccessIterator {
+        private:
+            pointer iterator;
+        public:
+            ReverseIterator() = delete;
+            explicit ReverseIterator(pointer p) : iterator {p} {}
+            ReverseIterator(const ReverseIterator &other) : iterator {other.iterator} {}
+            ReverseIterator(ReverseIterator &&other) noexcept : iterator {other.iterator} {
+                other.iterator = nullptr;
+            }
+            ReverseIterator &operator=(const ReverseIterator &other) {
+                if(&other == this) {
+                    return *this;
+                }
+                this->iterator = other.iterator;
+                return *this;
+            }
+            ReverseIterator &operator=(ReverseIterator &&other) noexcept {
+                if(&other == this) {
+                    return *this;
+                }
+                this->iterator = other.iterator;
+                other.iterator = nullptr;
+                return *this;
+            }
+            pointer operator->() {
+                return this->iterator;
+            }
+            constPointer operator->() const {
+                return this->iterator;
+            }
+            reference operator*() {
+                return *this->iterator;
+            }
+            constReference operator*() const {
+                return *this->iterator;
+            }
+            ReverseIterator &operator++() {
+                --this->iterator;
+                return *this;
+            }
+            ReverseIterator operator++(int) {
+                ReverseIterator temp {*this};
+                ++*this;
+                return temp;
+            }
+            ReverseIterator &operator--() {
+                ++this->iterator;
+                return *this;
+            }
+            ReverseIterator operator--(int) {
+                ReverseIterator temp {*this};
+                --*this;
+                return temp;
+            }
+            ReverseIterator operator+(long n) {
+                return ReverseIterator(this->iterator -= n);
+            }
+            ReverseIterator operator-(long n) {
+                return ReverseIterator(this->iterator += n);
+            }
+            ReverseIterator &operator+=(long n) {
+                this->iterator -= n;
+                return *this;
+            }
+            ReverseIterator &operator-=(long n) {
+                this->iterator += n;
+                return *this;
+            }
+            reference operator[](long n) {
+                if(n >= 0) {
+                    return *(this->iterator - n);
+                }
+                return *(this->iterator + n);
+            }
+            bool operator==(const ReverseIterator &other) const {
+                return this->iterator == other.iterator;
+            }
+            bool operator not_eq(const ReverseIterator &other) const {
+                return not(*this == other);
+            }
+            bool operator<(const ReverseIterator &other) const {
+                return [&]() -> bool {
+                    return std::greater<T *>()(this->iterator, other.iterator);
+                }();
+            }
+            bool operator<=(const ReverseIterator &other) const {
+                return *this < other or *this == other;
+            }
+            bool operator>(const ReverseIterator &other) const {
+                return not(*this < other);
+            }
+            bool operator>=(const ReverseIterator &other) const {
+                return *this > other or *this == other;
+            }
+            explicit operator pointer() const {
+                return this->iterator;
+            }
+        };
+    protected:
+        void free() noexcept override {
+            while(this->first not_eq this->cursor) {
+                this->destroy(this->cursor + 1);
+            }
+            this->first = this->end;
+            //::operator delete (this->end);
+        }
+        void checkPointer(pointer first, pointer end, pointer p) const override {
+            if([](pointer first, pointer end, pointer p) -> bool {
+                return std::less<pointer>()(p, end) and std::greater_equal<pointer>()(p, first);
+            }(this->first, this->end, p)) {
+                throw BadPointer("The argument pointer isn't allocated by Allocate!");
+            }
+        }
+        void reallocate() override {
+            const auto backupSize {this->first - this->cursor};
+            if(not backupSize) {
+                return;
+            }
+            auto backup {reinterpret_cast<pointer>(::operator new (sizeof(valueType) * backupSize))};
+            auto backupCursor {this->first};
+            for(auto i {0}; backupCursor not_eq this->cursor; ++i) {
+                backup[i] = *backupCursor--;
+            }
+            this->free();
+            this->allocate(this->size);
+            for(auto i {0}; i < backupSize; ++i) {
+                *this->cursor-- = *(backup + i);
+            }
+            ::operator delete (backup);
+        }
+    public:
+        using Allocator<T>::Allocator;
+        using Allocator<T>::operator=;
+        ~AllocatorReverse() override {
+            this->free();
+        }
+        pointer allocate(sizeType size) & override {
+            this->size = size;
+            if(this->first) {
+                this->reallocate();
+                return this->first;
+            }
+            this->end = reinterpret_cast<pointer>(
+                    ::operator new (static_cast<size_t>(this->size * sizeof(valueType)))
+            );
+            if(not this->end) {
+                throw BadPointer("Fail to allocate the memory!");
+            }
+            this->cursor = this->first = this->end + this->size - 1;
+            return this->first;
+        }
+        pointer construct(referenceToPointer p, constReference value) & override {
+            this->checkPointer(this->first, this->end, p);
+            new (p--) valueType(value);
+            return p;
+        }
+        template <typename ...Args>
+        pointer construct(referenceToPointer p, Args &&...args) & {
+            this->checkPointer(this->first, this->end, p);
+            new (p--) valueType(std::forward<Args>(args)...);
+            return p;
+        }
+        pointer construct(referenceToPointer p, rightValueReference value) & override {
+            this->checkPointer(this->first, this->end, p);
+            new (p--) valueType(std::move(value));
+            return p;
+        }
+        ReverseIterator construct(ReverseIterator rIt, constReference value) & {
+            this->checkPointer(this->first, this->end, static_cast<pointer>(rIt));
+            new (static_cast<pointer>(rIt)) valueType(value);
+            if(static_cast<pointer>(rIt) == this->cursor) {
+                --this->cursor;
+            }
+            return rIt - 1;
+        }
+        template <typename ...Args>
+        ReverseIterator construct(ReverseIterator rIt, Args &&...args) & {
+            this->checkPointer(this->first, this->end, static_cast<pointer>(rIt));
+            new (static_cast<pointer>(rIt)) valueType(std::forward<Args>(args)...);
+            if(static_cast<pointer>(rIt) == this->cursor) {
+                --this->cursor;
+            }
+            return rIt - 1;
+        }
+        ReverseIterator construct(ReverseIterator rIt, rightValueReference value) & {
+            this->checkPointer(this->first, this->end, static_cast<pointer>(rIt));
+            new (static_cast<pointer>(rIt)) valueType(std::move(value));
+            if(static_cast<pointer>(rIt) == this->cursor) {
+                --this->cursor;
+            }
+            return rIt - 1;
+        }
+        pointer destroy(pointer p) & override {
+            this->checkPointer(this->first, this->end, p);
+            p->~valueType();
+            if([&]() -> bool {
+                return std::less_equal<pointer>()(this->cursor + 1, this->first) and
+                       this->cursor + 1 == p;
+            }()) {
+                ++this->cursor;
+            }
+            return p;
+        }
+        sizeType usedSize() const override {
+            return this->first - this->cursor;
+        }
+        const ReverseIterator getFirst() const & {
+            return ReverseIterator(this->first);
+        }
+        const ReverseIterator getCursor() const & {
+            return ReverseIterator(this->cursor);
+        };
+        ReverseIterator getCursor() & {
+            return ReverseIterator(this->cursor);
+        }
+        const ReverseIterator getEnd() const & {
+            return ReverseIterator(this->end);
+        }
     };
 }
 
