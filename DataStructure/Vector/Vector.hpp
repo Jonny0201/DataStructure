@@ -11,15 +11,15 @@ namespace DataStructure {
         class OutOfRange;
         class EmptyVector;
     public:
-        class Iterator final {
+        class Iterator final : public RandomAccessIterator {
         public:
             using valueType = T;
             using reference = T &;
             using pointer = T *;
             using constPointer = const T *;
             using constReference = const T &;
-            using differenceType = ptrdiff_t;
-            using sizeType = size_t;
+            using differenceType = long;
+            using sizeType = unsigned long;
         private:
             pointer iterator;
         public:
@@ -130,6 +130,9 @@ namespace DataStructure {
         using allocator = Alloc;
     private:
         pointer backup(differenceType, iteratorReference, sizeType &);
+        iterator getIterator(bool, __DataStructure_trueType) const;
+        auto getIterator(bool, __DataStructure_falseType) const ->
+            decltype(static_cast<Vector<T, Alloc> *>(nullptr)->array.getEnd());
 #ifdef OTHER_FUNCTION
         bool findExpand(constReference) const;
         template <typename ...Args>
@@ -193,10 +196,20 @@ namespace DataStructure {
         iterator erase(differenceType, sizeType = 1);
         iterator erase(constIterator);
         iterator erase(constIterator, constIterator);
-        iterator begin() const;
-        iterator end() const;
-        constIterator constBegin() const;
-        constIterator constEnd() const;
+        auto begin() const ->
+            decltype(static_cast<Vector<T, Alloc> *>(nullptr)->getIterator(
+                false, typename __DataStructure_isPointer<
+                    decltype(static_cast<Vector<T, Alloc> *>(nullptr)->array.getFirst())
+                >::result())
+            );
+        auto end() const ->
+            decltype(static_cast<Vector<T, Alloc> *>(nullptr)->getIterator(
+                true, typename __DataStructure_isPointer<
+                    decltype(static_cast<Vector<T, Alloc> *>(nullptr)->array.getCursor())
+                >::result())
+            );
+        auto constBegin() const -> const decltype(static_cast<Vector<T, Alloc> *>(nullptr)->begin());
+        auto constEnd() const -> const decltype(static_cast<Vector<T, Alloc> *>(nullptr)->end());
 #ifdef OTHER_FUNCTION
         public:
         iterator find(constReference) const;
@@ -245,6 +258,22 @@ DataStructure::Vector<T, Alloc>::backup(differenceType index, iteratorReference 
         this->array.destroy(this->array.getCursor() - 1);
     }
     return backupArray;
+}
+template <typename T, typename Alloc>
+inline typename DataStructure::Vector<T, Alloc>::iterator
+DataStructure::Vector<T, Alloc>::getIterator(bool isCursor, __DataStructure_trueType) const {
+    if(isCursor) {
+        return iterator(this->array.getCursor());
+    }
+    return iterator(this->array.getFirst());
+}
+template <typename T, typename Alloc>
+inline auto DataStructure::Vector<T, Alloc>::getIterator(bool isCursor, __DataStructure_falseType) const ->
+        decltype(static_cast<Vector<T, Alloc> *>(nullptr)->array.getEnd()) {
+    if(isCursor) {
+        return this->array.getCursor();
+    }
+    return this->array.getFirst();
 }
 template <typename T, typename Alloc>
 DataStructure::Vector<T, Alloc>::Vector() : ArrayBase<T, Alloc>() {
@@ -407,7 +436,7 @@ void
 #endif
 DataStructure::Vector<T, Alloc>::popFront() {
 #ifdef POP_GET_OBJECT
-    if(not(this->size())) {
+    if(not this->size()) {
         throw EmptyForwardList("The Forward List is empty!");
     }
     auto returnNumber {(*this)[0]};
@@ -425,7 +454,7 @@ void
 #endif
 DataStructure::Vector<T, Alloc>::popBack() {
 #ifdef POP_GET_OBJECT
-    if(not(this->size())) {
+    if(not this->size()) {
         throw EmptyForwardList("The Forward List is empty!");
     }
     auto returnNumber {(*this)[this->size() - 1]};
@@ -592,21 +621,35 @@ DataStructure::Vector<T, Alloc>::erase(constIterator begin, constIterator end) {
     return this->erase(index, static_cast<sizeType>(size));
 }
 template <typename T, typename Alloc>
-inline typename DataStructure::Vector<T, Alloc>::iterator DataStructure::Vector<T, Alloc>::begin() const {
-    return iterator(this->array.getFirst());
+inline auto DataStructure::Vector<T, Alloc>::begin() const ->
+        decltype(static_cast<Vector<T, Alloc> *>(nullptr)->getIterator(
+            false, typename __DataStructure_isPointer<
+                decltype(static_cast<Vector<T, Alloc> *>(nullptr)->array.getFirst())
+            >::result())
+        ) {
+    return this->getIterator(false, typename __DataStructure_isPointer<
+                                decltype(static_cast<Vector *>(nullptr)->array.getFirst())
+                             >::result());
 }
 template <typename T, typename Alloc>
-inline typename DataStructure::Vector<T, Alloc>::iterator DataStructure::Vector<T, Alloc>::end() const {
-    return iterator(this->array.getCursor());
+inline auto DataStructure::Vector<T, Alloc>::end() const ->
+        decltype(static_cast<Vector<T, Alloc> *>(nullptr)->getIterator(
+            true, typename __DataStructure_isPointer<
+                decltype(static_cast<Vector<T, Alloc> *>(nullptr)->array.getCursor())
+            >::result())
+        ) {
+    return this->getIterator(true, typename __DataStructure_isPointer<
+                                decltype(static_cast<Vector *>(nullptr)->array.getCursor())
+                             >::result());
 }
 template <typename T, typename Alloc>
-inline typename DataStructure::Vector<T, Alloc>::constIterator
-DataStructure::Vector<T, Alloc>::constBegin() const {
+inline auto DataStructure::Vector<T, Alloc>::constBegin() const ->
+        const decltype(static_cast<Vector<T, Alloc> *>(nullptr)->begin()) {
     return this->begin();
 }
 template <typename T, typename Alloc>
-inline typename DataStructure::Vector<T, Alloc>::constIterator
-DataStructure::Vector<T, Alloc>::constEnd() const {
+inline auto DataStructure::Vector<T, Alloc>::constEnd() const ->
+        const decltype(static_cast<Vector<T, Alloc> *>(nullptr)->end()) {
     return this->end();
 }
 #ifdef OTHER_FUNCTION
