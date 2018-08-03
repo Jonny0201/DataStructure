@@ -11,16 +11,21 @@ namespace DataStructure {
         class OutOfRange;
         class EmptyForwardList;
         class BadIterator;
+        template <typename Type>
+        struct Node {
+            struct Node *next;
+            Type data;
+        };
     public:
-        class Iterator {
+        class Iterator : virtual public InputIterator, virtual public OutputIterator {
         public:
             using valueType = Node<T>;
             using reference = Node<T> &;
             using pointer = Node<T> *;
             using constPointer = const Node<T> *;
             using constReference = const Node<T> &;
-            using differenceType = ptrdiff_t;
-            using sizeType = size_t;
+            using differenceType = long;
+            using sizeType = unsigned long;
         private:
             pointer iterator;
         public:
@@ -29,6 +34,9 @@ namespace DataStructure {
             Iterator(const Iterator &other) : iterator {other.iterator} {}
             Iterator(Iterator &&other) noexcept : iterator {other.iterator} {
                 other.iterator = nullptr;
+            }
+            ~Iterator() {
+                this->iterator = nullptr;
             }
             Iterator &operator=(const Iterator &other) {
                 if(&other == this) {
@@ -46,7 +54,16 @@ namespace DataStructure {
                 return *this;
             }
             T &operator*() {
-                return iterator->data;
+                return this->iterator->data;
+            }
+            const T &operator*() const {
+                return this->iterator->data;
+            }
+            T *operator->() {
+                return &this->iterator->data;
+            }
+            const T *operator->() const {
+                return &this->iterator->data;
             }
             bool operator==(const Iterator &other) const {
                 return this->iterator == other.iterator;
@@ -55,14 +72,14 @@ namespace DataStructure {
                 return not(*this == other);
             }
             Iterator &operator++() {
-                if(this->iterator->next == nullptr) {
+                if(not this->iterator->next) {
                     throw BadIterator("The next iterator is a bad-iterator!");
                 }
                 this->iterator = this->iterator->next;
                 return *this;
             }
             Iterator operator++(int) {
-                if(this->iterator->next == nullptr) {
+                if(not this->iterator->next) {
                     throw BadIterator("The next iterator is a bad-iterator!");
                 }
                 Iterator temp {*this};
@@ -76,8 +93,8 @@ namespace DataStructure {
 #endif
         };
     public:
-        using differenceType = ptrdiff_t;
-        using sizeType = size_t;
+        using differenceType = long;
+        using sizeType = unsigned long;
         using valueType = T;
         using constType = const T;
         using reference = T &;
@@ -98,7 +115,7 @@ namespace DataStructure {
         node last;
     private:
         template <typename ForwardIterator>
-        void init(ForwardIterator begin, ForwardIterator end);
+        void init(ForwardIterator, ForwardIterator);
     public:
         ForwardList();
         ForwardList(sizeType, constReference);
@@ -215,29 +232,12 @@ DataStructure::ForwardList<T, Alloc>::ForwardList() :
 }
 template <typename T, typename Alloc>
 DataStructure::ForwardList<T, Alloc>::ForwardList(sizeType size) :
-        first {reinterpret_cast<node>(Alloc::operator new (sizeof(node)))},
-        last {reinterpret_cast<node>(Alloc::operator new (sizeof(node)))} {
-    if(not(size)) {
-        this->first->next = this->last;
-        this->last->next = nullptr;
-        return;
-    }
-    auto cursor {this->first->next = reinterpret_cast<node>(Alloc::operator new (sizeof(node)))};
-    using t = typename removeReference<valueType>::type;
-    for(auto i {1}; i < size; ++i) {
-        cursor->next = reinterpret_cast<node>(Alloc::operator new (sizeof(node)));
-        cursor->data = t();
-        cursor = cursor->next;
-    }
-    cursor->data = t();
-    cursor->next = this->last;
-    this->last->next = nullptr;
-}
+        ForwardList(size, typename removeReference<T>::type()){}
 template <typename T, typename Alloc>
 DataStructure::ForwardList<T, Alloc>::ForwardList(sizeType size, constReference value) :
         first {reinterpret_cast<node>(Alloc::operator new (sizeof(node)))},
         last {reinterpret_cast<node>(Alloc::operator new (sizeof(node)))} {
-    if(not(size)) {
+    if(not size) {
         this->first->next = this->last;
         this->last->next = nullptr;
         return;
@@ -268,9 +268,7 @@ template <typename T, typename Alloc>
 DataStructure::ForwardList<T, Alloc>::ForwardList(std::initializer_list<valueType> list) :
         first {reinterpret_cast<node>(Alloc::operator new (sizeof(node)))},
         last {reinterpret_cast<node>(Alloc::operator new (sizeof(node)))} {
-    auto begin {list.begin()};
-    auto end {list.end()};
-    this->init(begin, end);
+    this->init(list.begin(), list.end());
 }
 template <typename T, typename Alloc>
 DataStructure::ForwardList<T, Alloc>::ForwardList(const ForwardList &other) :
@@ -526,7 +524,7 @@ template <typename ...Args>
 void DataStructure::ForwardList<T, Alloc>::emplaceFront(Args &&...args) {
     auto newNode {reinterpret_cast<node>(Alloc::operator new (sizeof(node)))};
     newNode->next = this->first->next;
-    new (&newNode->data) valueType(std::forward<Args>(args)...);
+    new (&newNode->data) valueType(std::move(args)...);
     this->first->next = newNode;
 }
 template <typename T, typename Alloc>
@@ -543,7 +541,7 @@ DataStructure::ForwardList<T, Alloc>::emplaceAfter(differenceType position, Args
         cursor = cursor->next;
     }
     auto returnNode {reinterpret_cast<node>(Alloc::operator new (sizeof(node)))};
-    new (&returnNode->data) valueType(std::forward<Args>(args)...);
+    new (&returnNode->data) valueType(std::move<Args>(args)...);
     returnNode->next = cursor->next;
     cursor->next = returnNode;
     return iterator(returnNode);
