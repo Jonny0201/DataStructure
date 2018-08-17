@@ -66,9 +66,7 @@ Finally, Allocator should hold two functions : `operator new` and `operator dele
 >- StaticList
 >- Stack
 >- BilateralStack
->- LinkedStack
 >- Queue
->- LinkedQueue
 >- PriorityQueue
 >- Deque
 >- String
