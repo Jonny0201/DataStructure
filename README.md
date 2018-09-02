@@ -57,9 +57,10 @@ Finally, Allocator should hold two functions : `operator new` and `operator dele
 
 ## Completed
 
->- Vector : It is designed by array whose behaviour like an array.
->- ForwardList : The list whose iterator only can go forward.
->- List : The list whose iterator can not only go forward, but also go back.
+>- Vector : Vector is a sequence container that encapsulates dynamic size arrays.
+>- ForwardList : ForwardList is a container that supports fast insertion and removal of elements from anywhere in the container.
+>- List : List is a container that supports constant time insertion and removal of elements from anywhere in the container.
+>- Deque : Deque (double-ended queue) is an indexed sequence container that allows fast insertion and deletion at both its beginning and its end.
 
 ## Coming Soon...
 
@@ -68,7 +69,6 @@ Finally, Allocator should hold two functions : `operator new` and `operator dele
 >- BilateralStack
 >- Queue
 >- PriorityQueue
->- Deque
 >- String
 >- HeapString
 >- BlockingLinkedString
