@@ -1,7 +1,3 @@
-//
-// Created by Jonny Charlotte on 7/8/2018.
-//
-
 #ifndef DATA_STRUCTURE_STACK_HPP
 #define DATA_STRUCTURE_STACK_HPP
 
