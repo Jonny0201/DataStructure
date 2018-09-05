@@ -61,12 +61,12 @@ Finally, Allocator should hold two functions : `operator new` and `operator dele
 >- ForwardList : ForwardList is a container that supports fast insertion and removal of elements from anywhere in the container.
 >- List : List is a container that supports constant time insertion and removal of elements from anywhere in the container.
 >- Deque : Deque (double-ended queue) is an indexed sequence container that allows fast insertion and deletion at both its beginning and its end.
+>- Stack : Stack is a container adapter that gives the programmer the functionality of a stack - specifically, a FILO (first-in, last-out) data structure.
+>- BilateralStack : A stack who is in high space-utilization rate. There are two stacks in every bilateral stack.
 
 ## Coming Soon...
 
 >- StaticList
->- Stack
->- BilateralStack
 >- Queue
 >- PriorityQueue
 >- String
