@@ -16,6 +16,9 @@ private:
     static char *__end;
     static void __allocate() {
         self::__start = reinterpret_cast<char *>(::operator new (static_cast<unsigned long>(__TOTAL_SIZE)));
+        if(not self::start) {
+            throw;
+        }
         self::__end = self::__start + static_cast<long>(__TOTAL_SIZE);
         auto __node_end {
             reinterpret_cast<__node *>(self::__start + (static_cast<long>(__TOTAL_SIZE) - static_cast<long>(8)))
@@ -94,6 +97,6 @@ int main(int argc, char *argv[]) {
     f->c = 3;
     f->d = 4;
     cout << f << endl;
-    __memory_pool_prototype::operator delete (f, sizeof f);
+    __memory_pool_prototype::operator delete (f, sizeof *f);
     __deallocate_memory_pool();
 }
