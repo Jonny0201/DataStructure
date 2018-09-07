@@ -16,7 +16,7 @@ private:
     static char *__end;
     static void __allocate() {
         self::__start = reinterpret_cast<char *>(::operator new (static_cast<unsigned long>(__TOTAL_SIZE)));
-        if(not self::start) {
+        if(not self::__start) {
             throw;
         }
         self::__end = self::__start + static_cast<long>(__TOTAL_SIZE);
