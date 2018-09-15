@@ -59,13 +59,13 @@ Finally, Allocator should hold two functions : `operator new` and `operator dele
 >- ForwardList : ForwardList is a container that supports fast insertion and removal of elements from anywhere in the container.
 >- List : List is a container that supports constant time insertion and removal of elements from anywhere in the container.
 >- Deque : Deque (double-ended queue) is an indexed sequence container that allows fast insertion and deletion at both its beginning and its end.
->- Stack : Stack is a container adapter that gives the programmer the functionality of a stack - specifically, a FILO (first-in, last-out) data structure.
+>- Stack : Default Stack is a container adapter that gives the programmer the functionality of a stack - specifically, a FILO (first-in, last-out) data structure.
 >- BilateralStack : A stack who is in high space-utilization rate. There are two stacks in every bilateral stack.
+>- Queue : Default Queue is a container adapter that gives the programmer the functionality of a queue - specifically, a FIFO (first-in, first-out) data structure.
 
 ## Coming Soon...
 
 >- StaticList
->- Queue
 >- PriorityQueue
 >- String
 >- HeapString
@@ -74,8 +74,8 @@ Finally, Allocator should hold two functions : `operator new` and `operator dele
 ## Environment
 
  ```
- macOS 10.13.5
- CLion 2018.1.2
+ macOS 10.13.6
+ CLion 2018.2
  Apple LLVM version 9.1.0 (clang-902.0.39.2)
  ```
 
