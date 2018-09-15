@@ -2,8 +2,6 @@
 
 Project Name : Data Structure
 
-Aim : Hopes it can help improve my programming skill!
-
 ## Introduction
 
 Data structure is the base of the computer programming.
