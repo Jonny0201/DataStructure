@@ -7,7 +7,7 @@ It is namespaced in namespace `DataStructure`, so if you want to use this, you s
 ## Definition
 
     template <typename T, typename Container, bool Sacrifice, bool Tag>
-    class Stack;
+    class Queue;
 
 Default queue is a container adapter. In the version of queue, template parameter `bool Sacrifice` and `bool Tag` is useless.
 
@@ -111,7 +111,7 @@ These function should NOT be used in production environment. Besides, these func
 2. pointer &getLast();        //Partially specialized function.
 3. sizeType &getContainerSize();        //Partially specialized function.
 4. pointer &getFirst();        //Partially specialized function for Queue<T, T *, true, false>.
-5. bool &getTag();        //Partially specialized function for Stack<T, T *, false, true>.
+5. bool &getTag();        //Partially specialized function for Queue<T, T *, false, true>.
 ```
 
   > Tip : `container` is a type from `Queue`, it is `private`.
@@ -120,7 +120,7 @@ These function should NOT be used in production environment. Besides, these func
 
 Though the `Queue` is finished and it can be used now, it still exists many problems :
 
-- You cannot use you own `Allocator` in the Stack.
+- You cannot use you own `Allocator` in the Queue.
 
 If you find any error in the `Queue`, please tell me!
 
