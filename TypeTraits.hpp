@@ -307,63 +307,63 @@ namespace DataStructure {
         using constPointer = const valueType *;
         using iteratorTag = RandomAccessIterator;
     };
-    template <bool>
+    template <typename Iterator, bool>
     struct __DataStructure_InputIteratorInferringAuxiliary {};
-    template <>
-    struct __DataStructure_InputIteratorInferringAuxiliary<true> {
-        using __type = InputIterator;
+    template <typename Iterator>
+    struct __DataStructure_InputIteratorInferringAuxiliary<Iterator, true> {
+        using __type = Iterator;
     };
     template <typename Iterator>
     struct __DataStructure_isInputIterator {
-        using __result = typename __DataStructure_InputIteratorInferringAuxiliary<
+        using __result = typename __DataStructure_InputIteratorInferringAuxiliary<Iterator,
                 __DataStructure_IteratorTraits<Iterator>::iteratorTag::isInputIterator
         >::__type;
     };
-    template <bool>
+    template <typename Iterator, bool>
     struct __DataStructure_OutputIteratorInferringAuxiliary {};
-    template <>
-    struct __DataStructure_OutputIteratorInferringAuxiliary<true> {
-        using __type = OutputIterator;
+    template <typename Iterator>
+    struct __DataStructure_OutputIteratorInferringAuxiliary<Iterator, true> {
+        using __type = Iterator;
     };
     template <typename Iterator>
     struct __DataStructure_isOutputIterator {
-        using __result = typename __DataStructure_OutputIteratorInferringAuxiliary<
+        using __result = typename __DataStructure_OutputIteratorInferringAuxiliary<Iterator,
                 __DataStructure_IteratorTraits<Iterator>::iteratorTag::isOutputIterator
         >::__type;
     };
-    template <bool>
+    template <typename Iterator, bool>
     struct __DataStructure_ForwardIteratorInferringAuxiliary {};
-    template <>
-    struct __DataStructure_ForwardIteratorInferringAuxiliary<true> {
-        using __type = ForwardIterator;
+    template <typename Iterator>
+    struct __DataStructure_ForwardIteratorInferringAuxiliary<Iterator, true> {
+        using __type = Iterator;
     };
     template <typename Iterator>
     struct __DataStructure_isForwardIterator {
-        using __result = typename __DataStructure_ForwardIteratorInferringAuxiliary<
+        using __result = typename __DataStructure_ForwardIteratorInferringAuxiliary<Iterator,
                 __DataStructure_IteratorTraits<Iterator>::iteratorTag::isForwardIterator
         >::__type;
     };
-    template <bool>
+    template <typename Iterator, bool>
     struct __DataStructure_BidirectionalIteratorInferringAuxiliary {};
-    template <>
-    struct __DataStructure_BidirectionalIteratorInferringAuxiliary<true> {
-        using __type = BidirectionalIterator;
+    template <typename Iterator>
+    struct __DataStructure_BidirectionalIteratorInferringAuxiliary<Iterator, true> {
+        using __type = Iterator;
     };
     template <typename Iterator>
     struct __DataStructure_isBidirectionalIterator {
-        using __result = typename __DataStructure_BidirectionalIteratorInferringAuxiliary<
+        using __result = typename __DataStructure_BidirectionalIteratorInferringAuxiliary<Iterator,
                 __DataStructure_IteratorTraits<Iterator>::iteratorTag::isBidirectionalIterator
         >::__type;
     };
-    template <bool>
+    template <typename Iterator, bool>
     struct __DataStructure_RandomAccessIteratorInferringAuxiliary {};
-    template <>
-    struct __DataStructure_RandomAccessIteratorInferringAuxiliary<true> {
-        using __type = RandomAccessIterator;
+    template <typename Iterator>
+    struct __DataStructure_RandomAccessIteratorInferringAuxiliary<Iterator, true> {
+        using __type = Iterator;
     };
     template <typename Iterator>
     struct __DataStructure_isRandomAccessIterator {
-        using __result = typename __DataStructure_RandomAccessIteratorInferringAuxiliary<
+        using __result = typename __DataStructure_RandomAccessIteratorInferringAuxiliary<Iterator,
                 __DataStructure_IteratorTraits<Iterator>::iteratorTag::isRandomAccessIterator
         >::__type;
     };
