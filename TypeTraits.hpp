@@ -11,8 +11,8 @@ namespace DataStructure {
         using type = T;
     };
     template <typename T>
-    struct removePointer<T *const> {
-        using type = T;
+    struct removePointer<const T *> {
+        using type = const T;
     };
     template <typename T>
     struct removeReference {
@@ -25,6 +25,13 @@ namespace DataStructure {
     template <typename T>
     struct removeReference<T &&> {
         using type = T;
+    };
+    struct NotIterator {
+        constexpr static bool isInputIterator {false};
+        constexpr static bool isOutputIterator {false};
+        constexpr static bool isForwardIterator {false};
+        constexpr static bool isBidirectionalIterator {false};
+        constexpr static bool isRandomAccessIterator {false};
     };
     struct InputIterator {
         constexpr static bool isInputIterator {true};
@@ -283,8 +290,20 @@ namespace DataStructure {
         using hasTrivialDestructor = __DataStructure_trueType;
         using is_POD_type = __DataStructure_trueType;
     };
-    template <typename Iterator>
+    template <typename, bool>
     struct __DataStructure_IteratorTraits {
+        using sizeType = void;
+        using differenceType = void;
+        using valueType = void;
+        using reference = void;
+        using constReference = void;
+        using rightValueReference = void;
+        using pointer = void;
+        using constPointer = void;
+        using iteratorTag = NotIterator;
+    };
+    template <typename Iterator>
+    struct __DataStructure_IteratorTraits<Iterator, false> {
         using sizeType = typename Iterator::sizeType;
         using differenceType = typename Iterator::differenceType;
         using valueType = typename Iterator::valueType;
@@ -295,8 +314,8 @@ namespace DataStructure {
         using constPointer = typename Iterator::constPointer;
         using iteratorTag = typename Iterator::iteratorTag;
     };
-    template <typename T>
-    struct __DataStructure_IteratorTraits<T *> {
+    template <typename T, bool POD>
+    struct __DataStructure_IteratorTraits<T *, POD> {
         using sizeType = unsigned long;
         using differenceType = long;
         using valueType = T;
@@ -307,8 +326,10 @@ namespace DataStructure {
         using constPointer = const valueType *;
         using iteratorTag = RandomAccessIterator;
     };
-    template <typename Iterator, bool>
-    struct __DataStructure_InputIteratorInferringAuxiliary {};
+    template <typename, bool>
+    struct __DataStructure_InputIteratorInferringAuxiliary {
+        using __type = __DataStructure_falseType;
+    };
     template <typename Iterator>
     struct __DataStructure_InputIteratorInferringAuxiliary<Iterator, true> {
         using __type = Iterator;
@@ -316,11 +337,15 @@ namespace DataStructure {
     template <typename Iterator>
     struct __DataStructure_isInputIterator {
         using __result = typename __DataStructure_InputIteratorInferringAuxiliary<Iterator,
-                __DataStructure_IteratorTraits<Iterator>::iteratorTag::isInputIterator
+                __DataStructure_IteratorTraits<Iterator, static_cast<bool>(
+                                typename __DataStructure_typeTraits<Iterator>::is_POD_type()
+                        )>::iteratorTag::isInputIterator
         >::__type;
     };
-    template <typename Iterator, bool>
-    struct __DataStructure_OutputIteratorInferringAuxiliary {};
+    template <typename, bool>
+    struct __DataStructure_OutputIteratorInferringAuxiliary {
+        using __type = __DataStructure_falseType;
+    };
     template <typename Iterator>
     struct __DataStructure_OutputIteratorInferringAuxiliary<Iterator, true> {
         using __type = Iterator;
@@ -328,11 +353,15 @@ namespace DataStructure {
     template <typename Iterator>
     struct __DataStructure_isOutputIterator {
         using __result = typename __DataStructure_OutputIteratorInferringAuxiliary<Iterator,
-                __DataStructure_IteratorTraits<Iterator>::iteratorTag::isOutputIterator
+                __DataStructure_IteratorTraits<Iterator, static_cast<bool>(
+                        typename __DataStructure_typeTraits<Iterator>::is_POD_type()
+                )>::iteratorTag::isOutputIterator
         >::__type;
     };
-    template <typename Iterator, bool>
-    struct __DataStructure_ForwardIteratorInferringAuxiliary {};
+    template <typename, bool>
+    struct __DataStructure_ForwardIteratorInferringAuxiliary {
+        using __type = __DataStructure_falseType;
+    };
     template <typename Iterator>
     struct __DataStructure_ForwardIteratorInferringAuxiliary<Iterator, true> {
         using __type = Iterator;
@@ -340,11 +369,15 @@ namespace DataStructure {
     template <typename Iterator>
     struct __DataStructure_isForwardIterator {
         using __result = typename __DataStructure_ForwardIteratorInferringAuxiliary<Iterator,
-                __DataStructure_IteratorTraits<Iterator>::iteratorTag::isForwardIterator
+                __DataStructure_IteratorTraits<Iterator, static_cast<bool>(
+                        typename __DataStructure_typeTraits<Iterator>::is_POD_type()
+                )>::iteratorTag::isForwardIterator
         >::__type;
     };
-    template <typename Iterator, bool>
-    struct __DataStructure_BidirectionalIteratorInferringAuxiliary {};
+    template <typename, bool>
+    struct __DataStructure_BidirectionalIteratorInferringAuxiliary {
+        using __type = __DataStructure_falseType;
+    };
     template <typename Iterator>
     struct __DataStructure_BidirectionalIteratorInferringAuxiliary<Iterator, true> {
         using __type = Iterator;
@@ -352,11 +385,15 @@ namespace DataStructure {
     template <typename Iterator>
     struct __DataStructure_isBidirectionalIterator {
         using __result = typename __DataStructure_BidirectionalIteratorInferringAuxiliary<Iterator,
-                __DataStructure_IteratorTraits<Iterator>::iteratorTag::isBidirectionalIterator
+                __DataStructure_IteratorTraits<Iterator, static_cast<bool>(
+                        typename __DataStructure_typeTraits<Iterator>::is_POD_type()
+                )>::iteratorTag::isBidirectionalIterator
         >::__type;
     };
-    template <typename Iterator, bool>
-    struct __DataStructure_RandomAccessIteratorInferringAuxiliary {};
+    template <typename, bool>
+    struct __DataStructure_RandomAccessIteratorInferringAuxiliary {
+        using __type = __DataStructure_falseType;
+    };
     template <typename Iterator>
     struct __DataStructure_RandomAccessIteratorInferringAuxiliary<Iterator, true> {
         using __type = Iterator;
@@ -364,9 +401,15 @@ namespace DataStructure {
     template <typename Iterator>
     struct __DataStructure_isRandomAccessIterator {
         using __result = typename __DataStructure_RandomAccessIteratorInferringAuxiliary<Iterator,
-                __DataStructure_IteratorTraits<Iterator>::iteratorTag::isRandomAccessIterator
+                __DataStructure_IteratorTraits<Iterator, static_cast<bool>(
+                        typename __DataStructure_typeTraits<Iterator>::is_POD_type()
+                )>::iteratorTag::isRandomAccessIterator
         >::__type;
     };
+    template <typename T>
+    constexpr typename removeReference<T>::type &&move(T &&value) noexcept {
+        return static_cast<typename removeReference<T>::type &&>(value);
+    }
 }
 
 #endif //DATA_STRUCTURE_TYPETRAITS_HPP
