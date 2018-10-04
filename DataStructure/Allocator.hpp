@@ -7,15 +7,17 @@
 namespace DataStructure {
     template <typename T>
     class Allocator {
+    private:
+        class BadPointer;
     public:
         using sizeType = unsigned long;
         using differenceType = long;
         using valueType = T;
-        using reference = T &;
-        using constReference = const T &;
-        using pointer = T *;
-        using constPointer = const T *;
-        using rightValueReference = T &&;
+        using reference = valueType &;
+        using constReference = const valueType &;
+        using rightValueReference = valueType &&;
+        using pointer = valueType *;
+        using constPointer = const valueType *;
     public:
         using __DataStructure_isForwardAllocator = __DataStructure_trueType;
         using __DataStructure_isReverseAllocator = __DataStructure_falseType;
@@ -26,8 +28,8 @@ namespace DataStructure {
     private:
         static void destroy(void *, __DataStructure_falseType);
         static void destroy(void *, __DataStructure_trueType) noexcept;
-        static void destroy(void *, const void *, __DataStructure_falseType);
-        static void destroy(void *, const void *, __DataStructure_trueType) noexcept;
+        static void destroy(const void *, void *, __DataStructure_falseType);
+        static void destroy(const void *, const void *, __DataStructure_trueType) noexcept;
     public:
         static void *operator new (sizeType);
         static void operator delete (void *) noexcept;
@@ -43,6 +45,7 @@ namespace DataStructure {
                     static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
                 );
         void reallocate();
+        void check(pointer) const;
     public:
         constexpr Allocator();
         Allocator(const Allocator &);
@@ -61,10 +64,14 @@ namespace DataStructure {
     public:
         pointer allocate(sizeType = 64) &;
         pointer construct(pointer, constReference) & noexcept(
-                    static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDefaultConstructor())
+                    static_cast<bool>(
+                            typename __DataStructure_typeTraits<valueType>::hasTrivialDefaultConstructor()
+                    )
                 );
-        pointer construct(pointer, rightValueReference) &noexcept(
-                    static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDefaultConstructor())
+        pointer construct(pointer, rightValueReference) & noexcept(
+                    static_cast<bool>(
+                            typename __DataStructure_typeTraits<valueType>::hasTrivialDefaultConstructor()
+                    )
                 );
         template <typename ...Args>
         pointer construct(pointer, Args &&...) &;
@@ -82,11 +89,11 @@ namespace DataStructure {
         constPointer begin() const & noexcept;
         pointer begin() & noexcept;
         constPointer getCursor() const & noexcept;
-        pointer getCursor() & noexcept;
+        pointer &getCursor() & noexcept;
         constPointer end() const & noexcept;
         pointer resize(sizeType) &;
         pointer shrinkToFit() &;
-        void swap(Allocator &);
+        void swap(Allocator &) noexcept;
         pointer clear() & noexcept(
                     static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
                 );
@@ -98,11 +105,18 @@ namespace DataStructure {
 #endif
     };
     template <typename T>
-    void swap(Allocator<T> &, Allocator<T> &);
+    void swap(Allocator<T> &, Allocator<T> &) noexcept;
 }
 
 template <typename T>
-void DataStructure::swap(Allocator<T> &lhs, Allocator<T> &rhs) {
+class DataStructure::Allocator<T>::BadPointer : public DataStructure::RuntimeException {
+public:
+    explicit BadPointer(const char *error) : RuntimeException(error) {}
+    explicit BadPointer(const std::string &error) : RuntimeException(error) {}
+};
+
+template <typename T>
+void DataStructure::swap(Allocator<T> &lhs, Allocator<T> &rhs) noexcept {
     lhs.swap(rhs);
 }
 template <typename T>
@@ -112,11 +126,13 @@ inline void DataStructure::Allocator<T>::destroy(void *p, __DataStructure_falseT
 template <typename T>
 inline void DataStructure::Allocator<T>::destroy(void *, __DataStructure_trueType) noexcept {}
 template <typename T>
-inline void DataStructure::Allocator<T>::destroy(void *, const void *, __DataStructure_trueType) noexcept {}
+inline void
+DataStructure::Allocator<T>::destroy(const void *, const void *, __DataStructure_trueType) noexcept {}
 template <typename T>
-inline void DataStructure::Allocator<T>::destroy(void *first, const void *last, __DataStructure_falseType) {
+inline void DataStructure::Allocator<T>::destroy(const void *first, void *last, __DataStructure_falseType) {
+    --reinterpret_cast<pointer>(last);
     while(first not_eq last) {
-        reinterpret_cast<pointer &>(first)++->~valueType();
+        reinterpret_cast<pointer>(last)--->~valueType();
     }
 }
 template <typename T>
@@ -132,20 +148,30 @@ inline void DataStructure::Allocator<T>::free(pointer p) noexcept(
     if(not p) {
         return;
     }
-    Allocator::destroy(p, this->cursor, typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor());
+    Allocator::destroy(
+            p, this->cursor, typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor()
+    );
     Allocator::operator delete (p);
 }
 template <typename T>
 inline void DataStructure::Allocator<T>::reallocate() {
-    auto newFirst {reinterpret_cast<pointer>(Allocator::operator new (sizeof(valueType) * this->allocateSize))};
+    auto newFirst {reinterpret_cast<pointer>(
+                        Allocator::operator new (sizeof(valueType) * this->allocateSize)
+                  )};
     auto cursor {this->first};
     for(auto i {0}; cursor not_eq this->cursor;) {
-        new (newFirst + i++) valueType(std::move(static_cast<rightValueReference>(*cursor++)));
+        new (newFirst + i++) valueType(move(*cursor++));
     }
     const auto size {this->cursor - this->first};
     this->free(this->first);
     this->first = newFirst;
     this->cursor = this->first + size;
+}
+template <typename T>
+inline void DataStructure::Allocator<T>::check(pointer p) const {
+    if(p - this->first < 0 or p - this->end() >= 0) {
+        throw BadPointer("The pointer is not allocated by Allocator!");
+    }
 }
 template <typename T>
 inline void *DataStructure::Allocator<T>::operator new (sizeType size) {
@@ -183,11 +209,7 @@ DataStructure::Allocator<T>::Allocator(Allocator<T> &&rhs) noexcept : allocateSi
 }
 template <typename T>
 DataStructure::Allocator<T>::~Allocator() {
-    try {
-        this->free(this->first);
-    }catch(std::exception &) {
-
-    }
+    this->free(this->first);
 }
 template <typename T>
 DataStructure::Allocator<T> &DataStructure::Allocator<T>::operator=(const Allocator &rhs) & {
@@ -236,7 +258,7 @@ DataStructure::Allocator<T>::operator bool() const noexcept {
 template <typename T>
 typename DataStructure::Allocator<T>::pointer DataStructure::Allocator<T>::allocate(sizeType size) & {
     if(not size) {
-        size = 64;
+        size = sizeof(valueType) < 128 ? 64 : 8;
     }
     if(this->first) {
         if(size <= this->allocateSize) {
@@ -246,7 +268,9 @@ typename DataStructure::Allocator<T>::pointer DataStructure::Allocator<T>::alloc
         return this->first;
     }
     this->allocateSize = size;
-    this->first = reinterpret_cast<pointer>(Allocator::operator new (sizeof(valueType) * this->allocateSize));
+    this->first = reinterpret_cast<pointer>(
+            Allocator::operator new (sizeof(valueType) * this->allocateSize)
+    );
     this->cursor = this->first;
     return this->first;
 }
@@ -255,6 +279,7 @@ typename DataStructure::Allocator<T>::pointer
 DataStructure::Allocator<T>::construct(pointer p, constReference value) & noexcept(
             static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDefaultConstructor())
         ) {
+    this->check(p);
     new (p) valueType(value);
     if(p == this->cursor) {
         ++this->cursor;
@@ -266,7 +291,8 @@ typename DataStructure::Allocator<T>::pointer
 DataStructure::Allocator<T>::construct(pointer p, rightValueReference value) & noexcept(
             static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDefaultConstructor())
         ) {
-    new (p) valueType(std::move(value));
+    this->check(p);
+    new (p) valueType(move(value));
     if(p == this->cursor) {
         ++this->cursor;
     }
@@ -276,11 +302,7 @@ template <typename T>
 template <typename ...Args>
 typename DataStructure::Allocator<T>::pointer
 DataStructure::Allocator<T>::construct(pointer p, Args &&...args) & {
-    new (p) valueType(std::forward<Args>(args)...);
-    if(p == this->cursor) {
-        ++this->cursor;
-    }
-    return this->cursor;
+    return this->construct(p, valueType(std::forward<Args>(args)...));
 }
 template <typename T>
 typename DataStructure::Allocator<T>::pointer
@@ -337,11 +359,12 @@ typename DataStructure::Allocator<T>::constPointer DataStructure::Allocator<T>::
     return this->cursor;
 }
 template <typename T>
-typename DataStructure::Allocator<T>::pointer DataStructure::Allocator<T>::getCursor() & noexcept {
+typename DataStructure::Allocator<T>::pointer &DataStructure::Allocator<T>::getCursor() & noexcept {
     return this->cursor;
 }
 template <typename T>
-inline typename DataStructure::Allocator<T>::constPointer DataStructure::Allocator<T>::end() const & noexcept {
+inline typename DataStructure::Allocator<T>::constPointer
+DataStructure::Allocator<T>::end() const & noexcept {
     return this->first + static_cast<differenceType>(this->allocateSize);
 }
 template <typename T>
@@ -364,7 +387,7 @@ typename DataStructure::Allocator<T>::pointer DataStructure::Allocator<T>::shrin
     return this->first;
 }
 template <typename T>
-void DataStructure::Allocator<T>::swap(Allocator &rhs) {
+void DataStructure::Allocator<T>::swap(Allocator &rhs) noexcept {
     using std::swap;
     swap(this->allocateSize, rhs.allocateSize);
     swap(this->first, rhs.first);
