@@ -106,6 +106,9 @@ namespace DataStructure {
         using traits = __DataStructure_IteratorTraits<Iterator, static_cast<bool>(
                         typename __DataStructure_typeTraits<Iterator>::is_POD_type()
                 )>;
+        static_assert(traits::iteratorTag::isOutputIterator or traits::iteratorTag::isInputIterator,
+                            "The template argument need an iterator type!"
+                     );
         static_assert(traits::iteratorTag::isRandomAccessIterator,
                             "The template argument need an iterator who can be random accessed at least!"
                      );
