@@ -26,23 +26,26 @@ namespace DataStructure {
         pointer first;
         pointer cursor;
     private:
+        static char *chunk;
+        static char *chunk_cursor;
+    private:
         static void destroy(void *, __DataStructure_falseType);
         static void destroy(void *, __DataStructure_trueType) noexcept;
-        static void destroy(const void *, void *, __DataStructure_falseType);
+        static void destroy(void *, void *, __DataStructure_falseType);
         static void destroy(const void *, const void *, __DataStructure_trueType) noexcept;
     public:
         static void *operator new (sizeType);
         static void operator delete (void *) noexcept;
         static void destroy(void *) noexcept(
-                    static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
                 );
         static void destroy(void *, const void *) noexcept(
-                    static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
                 );
     private:
         void copyRHS(const Allocator &);
         void free(pointer) noexcept(
-                    static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
                 );
         void reallocate();
         void check(pointer) const;
@@ -55,7 +58,7 @@ namespace DataStructure {
         Allocator &operator=(const Allocator &) &;
         Allocator &operator=(Allocator &&) & noexcept;
         bool operator==(const Allocator &) const;
-        bool operator not_eq(const Allocator &) const;
+        bool operator!=(const Allocator &) const;
         bool operator<(const Allocator &) const = delete;
         bool operator<=(const Allocator &) const = delete;
         bool operator>(const Allocator &) const = delete;
@@ -65,29 +68,28 @@ namespace DataStructure {
         pointer allocate(sizeType = 64) &;
         pointer construct(pointer, constReference) & noexcept(
                     static_cast<bool>(
-                            typename __DataStructure_typeTraits<valueType>::hasTrivialDefaultConstructor()
+                            typename __DataStructure_TypeTraits<valueType>::hasTrivialDefaultConstructor()
                     )
                 );
         pointer construct(pointer, rightValueReference) & noexcept(
                     static_cast<bool>(
-                            typename __DataStructure_typeTraits<valueType>::hasTrivialDefaultConstructor()
+                            typename __DataStructure_TypeTraits<valueType>::hasTrivialDefaultConstructor()
                     )
                 );
         template <typename ...Args>
         pointer construct(pointer, Args &&...) &;
         pointer destroy(pointer) & noexcept(
-                    static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
                 );
         pointer destroy(pointer, constPointer) & noexcept(
-                    static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
                 );
         bool full() const & noexcept;
         bool empty() const & noexcept;
         sizeType size() const & noexcept;
         sizeType capacity() const & noexcept;
         sizeType reserve() const & noexcept;
-        constPointer begin() const & noexcept;
-        pointer begin() & noexcept;
+        pointer begin() const & noexcept;
         constPointer getCursor() const & noexcept;
         pointer &getCursor() & noexcept;
         constPointer end() const & noexcept;
@@ -95,7 +97,7 @@ namespace DataStructure {
         pointer shrinkToFit() &;
         void swap(Allocator &) noexcept;
         pointer clear() & noexcept(
-                    static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
                 );
 #ifdef DEBUG_DATA_STRUCTURE_FOR_ALLOCATOR
     public:
@@ -129,8 +131,9 @@ template <typename T>
 inline void
 DataStructure::Allocator<T>::destroy(const void *, const void *, __DataStructure_trueType) noexcept {}
 template <typename T>
-inline void DataStructure::Allocator<T>::destroy(const void *first, void *last, __DataStructure_falseType) {
+inline void DataStructure::Allocator<T>::destroy(void *first, void *last, __DataStructure_falseType) {
     --reinterpret_cast<pointer>(last);
+    reinterpret_cast<pointer>(first)->~valueType();
     while(first not_eq last) {
         reinterpret_cast<pointer>(last)--->~valueType();
     }
@@ -143,13 +146,13 @@ inline void DataStructure::Allocator<T>::copyRHS(const Allocator<T> &rhs) {
 }
 template <typename T>
 inline void DataStructure::Allocator<T>::free(pointer p) noexcept(
-            static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+            static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
         ) {
     if(not p) {
         return;
     }
     Allocator::destroy(
-            p, this->cursor, typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor()
+            p, this->cursor, typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
     );
     Allocator::operator delete (p);
 }
@@ -183,15 +186,15 @@ inline void DataStructure::Allocator<T>::operator delete (void *p) noexcept {
 }
 template <typename T>
 void DataStructure::Allocator<T>::destroy(void *p) noexcept(
-            static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+            static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
         ) {
-    Allocator::destroy(p, typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor());
+    Allocator::destroy(p, typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor());
 }
 template <typename T>
 void DataStructure::Allocator<T>::destroy(void *first, const void *last) noexcept(
-            static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+            static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
         ) {
-    Allocator::destroy(first, last, typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor());
+    Allocator::destroy(first, last, typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor());
 }
 template <typename T>
 constexpr DataStructure::Allocator<T>::Allocator() : allocateSize {0}, first {nullptr},
@@ -248,7 +251,7 @@ bool DataStructure::Allocator<T>::operator==(const Allocator &rhs) const {
     return true;
 }
 template <typename T>
-bool DataStructure::Allocator<T>::operator not_eq(const Allocator &rhs) const {
+bool DataStructure::Allocator<T>::operator!=(const Allocator &rhs) const {
     return not *this == rhs;
 }
 template <typename T>
@@ -277,7 +280,7 @@ typename DataStructure::Allocator<T>::pointer DataStructure::Allocator<T>::alloc
 template <typename T>
 typename DataStructure::Allocator<T>::pointer
 DataStructure::Allocator<T>::construct(pointer p, constReference value) & noexcept(
-            static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDefaultConstructor())
+            static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDefaultConstructor())
         ) {
     this->check(p);
     new (p) valueType(value);
@@ -289,7 +292,7 @@ DataStructure::Allocator<T>::construct(pointer p, constReference value) & noexce
 template <typename T>
 typename DataStructure::Allocator<T>::pointer
 DataStructure::Allocator<T>::construct(pointer p, rightValueReference value) & noexcept(
-            static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDefaultConstructor())
+            static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDefaultConstructor())
         ) {
     this->check(p);
     new (p) valueType(move(value));
@@ -307,9 +310,9 @@ DataStructure::Allocator<T>::construct(pointer p, Args &&...args) & {
 template <typename T>
 typename DataStructure::Allocator<T>::pointer
 DataStructure::Allocator<T>::destroy(pointer p) & noexcept(
-            static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+            static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
         ) {
-    Allocator::destroy(p, typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor());
+    Allocator::destroy(p, typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor());
     if(this->cursor - 1 == p) {
         --this->cursor;
     }
@@ -318,9 +321,9 @@ DataStructure::Allocator<T>::destroy(pointer p) & noexcept(
 template <typename T>
 typename DataStructure::Allocator<T>::pointer
 DataStructure::Allocator<T>::destroy(pointer first, constPointer last) & noexcept(
-            static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+            static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
         ) {
-    Allocator::destroy(first, last, typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor());
+    Allocator::destroy(first, last, typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor());
     if(this->cursor == last) {
         this->cursor = first;
     }
@@ -347,11 +350,7 @@ typename DataStructure::Allocator<T>::sizeType DataStructure::Allocator<T>::rese
     return static_cast<sizeType>(this->end() - this->cursor);
 }
 template <typename T>
-typename DataStructure::Allocator<T>::constPointer DataStructure::Allocator<T>::begin() const & noexcept {
-    return this->first;
-}
-template <typename T>
-typename DataStructure::Allocator<T>::pointer DataStructure::Allocator<T>::begin() & noexcept {
+typename DataStructure::Allocator<T>::pointer DataStructure::Allocator<T>::begin() const & noexcept {
     return this->first;
 }
 template <typename T>
@@ -395,13 +394,13 @@ void DataStructure::Allocator<T>::swap(Allocator &rhs) noexcept {
 }
 template <typename T>
 typename DataStructure::Allocator<T>::pointer DataStructure::Allocator<T>::clear() & noexcept(
-            static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+            static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
         ) {
     if(this->empty()) {
         return this->cursor;
     }
     Allocator::destroy(
-            this->first, this->cursor, typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor()
+            this->first, this->cursor, typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
     );
     this->cursor = this->first;
     return this->cursor;
