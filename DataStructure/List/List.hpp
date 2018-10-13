@@ -1,783 +1,672 @@
 #ifndef DATA_STRUCTURE_LIST_HPP
 #define DATA_STRUCTURE_LIST_HPP
 
-#include "Base.hpp"
+#include "../Allocator.hpp"
+#include "../Iterator.hpp"
 
 namespace DataStructure {
     template <typename T, typename Alloc = Allocator<T>>
     class List final {
-        friend void swap(List<T, Alloc> &a, List<T, Alloc> &b) {
-            using std::swap;
-            swap(a.first, b.first);
-            swap(a.last, b.last);
-        }
-    private:
-        template <typename Type>
-        struct Node {
-            struct Node *next;
-            struct Node *previous;
-            Type data;
-        };
-    private:
-        class OutOfRange;
-        class EmptyList;
     public:
-        class Iterator final : BidirectionalIterator {
-        public:
-            using valueType = Node<T>;
-            using reference = Node<T> &;
-            using pointer = Node<T> *;
-            using constPointer = const Node<T> *;
-            using constReference = const Node<T> &;
-            using differenceType = ptrdiff_t;
-            using sizeType = size_t;
-        private:
-            pointer iterator;
-        public:
-            Iterator() = delete;
-            explicit Iterator(pointer iterator) : iterator {iterator} {}
-            Iterator(const Iterator &other) : iterator {other.iterator} {}
-            Iterator(Iterator &&other) noexcept : iterator {other.iterator} {
-                other.iterator = nullptr;
-            }
-            ~Iterator() {
-                this->iterator = nullptr;
-            }
-            Iterator &operator=(const Iterator &other) {
-                if(&other == this) {
-                    return *this;
-                }
-                this->iterator = other.iterator;
-                return *this;
-            }
-            Iterator &operator=(Iterator &&other) noexcept {
-                if(&other == this) {
-                    return *this;
-                }
-                this->iterator = other.iterator;
-                other.iterator = nullptr;
-                return *this;
-            }
-            T &operator*() {
-                return this->iterator->data;
-            }
-            const T &operator*() const {
-                return this->iterator->data;
-            }
-            T *operator->() {
-                return &this->iterator->data;
-            }
-            const T *operator->() const {
-                return &this->iterator->data;
-            }
-            bool operator==(const Iterator &other) const {
-                return this->iterator == other.iterator;
-            }
-            bool operator not_eq(const Iterator &other) const {
-                return not(*this == other);
-            }
-            Iterator &operator++() {
-                this->iterator = this->iterator->next;
-                return *this;
-            }
-            Iterator operator++(int) {
-                Iterator temp {*this};
-                ++*this;
-                return temp;
-            }
-            Iterator &operator--() {
-                this->iterator = this->iterator->previous;
-                return *this;
-            }
-            Iterator operator--(int) {
-                Iterator temp {*this};
-                --*this;
-                return temp;
-            }
-#ifdef DEBUG_DATA_STRUCTURE_FOR_LIST_ITERATOR
-            pointer &getIterator() {
-                return this->iterator;
-            }
-#endif
-        };
-    public:
-        using differenceType = long;
-        using sizeType = unsigned long;
-        using valueType = T;
-        using constType = const T;
-        using reference = T &;
-        using constReference = const T &;
-        using pointer = T *;
-        using constPointer = const T *;
-        using constPointerConstant = const T *const;
-        using rightValueReference = T &&;
-        using iterator = Iterator;
-        using constIterator = const Iterator;
-        using iteratorReference = Iterator &;
-        using constIteratorReference = const Iterator &;
         using allocator = Alloc;
+        using sizeType = typename allocator::sizeType;
+        using differenceType = typename allocator::differenceType;
+        using valueType = typename allocator::valueType;
+        using reference = typename allocator::reference;
+        using constReference = typename allocator::constReference;
+        using rightValueReference = typename allocator::rightValueReference;
+        using pointer = typename allocator::pointer;
+        using constPointer = typename allocator::constPointer;
     private:
-        using node = Node<T> *;
+        using nodeType = __DataStructure_BidirectionalNode<valueType, reference, pointer>;
+        using constNodeType = __DataStructure_BidirectionalNode<valueType, constReference, constPointer>;
+    public:
+        using iterator = __DataStructure_ListIterator<nodeType>;
+        using constIterator = __DataStructure_ListIterator<constNodeType>;
+        using reverseIterator = __DataStructure_ListReverseIterator<nodeType>;
+        using constReverseIterator = __DataStructure_ListReverseIterator<constNodeType>;
+    private:
+        using node = nodeType *;
     private:
         node first;
-        node last;
     private:
-        template <typename ForwardIterator>
-        void init(ForwardIterator, ForwardIterator);
-        template <typename ForwardIterator>
-        void assignGeneric(ForwardIterator, ForwardIterator);
-        differenceType getDifference(constIterator);
+        static node getNewNode();
+    private:
+        void free() noexcept(
+                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+                );
+        void setLink(sizeType, constReference, node);
+        template <typename InputIterator,
+                        typename __DataStructure_isInputIterator<InputIterator>::__result * = nullptr
+                 >
+        void setLink(typename __DataStructure_isInputIterator<InputIterator>::__result,
+                            InputIterator, node
+                     );
+        void resetFirst() noexcept;
     public:
         List();
-        List(sizeType, constReference);
         explicit List(sizeType);
-        List(iterator, iterator);
-        List(pointer, pointer);
+        List(sizeType, constReference);
+        template <typename InputIterator,
+                        typename __DataStructure_isInputIterator<InputIterator>::__result * = nullptr
+                 >
+        List(typename __DataStructure_isInputIterator<InputIterator>::__result, InputIterator);
         List(std::initializer_list<valueType>);
         List(const List &);
         List(List &&) noexcept;
         ~List();
+    public:
         List &operator=(const List &);
         List &operator=(List &&) noexcept;
         List &operator=(std::initializer_list<valueType>);
         bool operator==(const List &) const;
-        bool operator not_eq(const List &) const;
+        bool operator!=(const List &) const;
         bool operator<(const List &) const;
         bool operator<=(const List &) const;
         bool operator>(const List &) const;
         bool operator>=(const List &) const;
-        explicit operator bool() const;
+        explicit operator bool() const noexcept;
+        List operator+() const;
+        List operator-() const;
     public:
-        void assign(sizeType, constReference);
-        void assign(iterator, iterator);
-        void assign(pointer, pointer);
+        void assign(sizeType, constReference = valueType());
+        template <typename InputIterator,
+                        typename __DataStructure_isInputIterator<InputIterator>::__result * = nullptr
+                 >
+        void assign(typename __DataStructure_isInputIterator<InputIterator>::__result, InputIterator);
         void assign(std::initializer_list<valueType>);
         valueType front() const;
         valueType back() const;
-        bool empty() const;
-        sizeType size() const;
-        iterator begin() const;
-        iterator end() const;
-        constIterator constBegin() const;
-        constIterator constEnd() const;
-        void clear();
+        iterator begin() const noexcept;
+        constIterator cbegin() const noexcept;
+        reverseIterator rbegin() const noexcept;
+        constReverseIterator crbegin() const noexcept;
+        iterator end() const noexcept;
+        constIterator cend() const noexcept;
+        reverseIterator rend() const noexcept;
+        constReverseIterator crend() const noexcept;
+        bool empty() const noexcept;
+        sizeType size() const noexcept;
+        void clear() noexcept(
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+        );
+        iterator insert(differenceType, constReference, sizeType = 1);
+        iterator insert(differenceType, rightValueReference);
+        iterator insert(constIterator, constReference, sizeType = 1);
+        iterator insert(constIterator, rightValueReference);
+        template <typename InputIterator,
+                typename __DataStructure_isInputIterator<InputIterator>::__result * = nullptr
+        >
+        iterator insert(constIterator,
+                        typename __DataStructure_isInputIterator<InputIterator>::__result, InputIterator
+        );
+        template <typename InputIterator,
+                typename __DataStructure_isInputIterator<InputIterator>::__result * = nullptr
+        >
+        iterator insert(differenceType,
+                        typename __DataStructure_isInputIterator<InputIterator>::__result, InputIterator
+        );
+        iterator insert(constIterator, std::initializer_list<valueType>);
+        iterator insert(differenceType, std::initializer_list<valueType>);
+        iterator erase(constIterator, sizeType = 1) noexcept(
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+        );
+        iterator erase(differenceType, sizeType = 1) noexcept(
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+        );
+        iterator erase(constIterator, constIterator) noexcept(
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+        );
         void pushBack(constReference);
         void pushBack(rightValueReference);
-        void popBack();
         void pushFront(constReference);
         void pushFront(rightValueReference);
-        void popFront();
-        iterator insert(constIterator, constReference, sizeType = 1);
-        iterator insert(constIterator, rightValueReference, sizeType = 1);
-        iterator insert(constReference, differenceType, sizeType = 1);
-        iterator insert(rightValueReference, differenceType, sizeType = 1);
-        iterator insert(constIterator, std::initializer_list<valueType>);
-        template <typename ForwardIterator>
-        iterator insert(constIterator, ForwardIterator, ForwardIterator);
+#ifdef POP_GET_OBJECT
+        valueType
+#else
+        void
+#endif
+        popFront() noexcept(
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+        );
+#ifdef POP_GET_OBJECT
+        valueType
+#else
+        void
+#endif
+        popBack() noexcept(
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+        );
         template <typename ...Args>
         iterator emplace(constIterator, Args &&...);
         template <typename ...Args>
-        void emplaceFront(Args &&...);
+        iterator emplace(differenceType, Args &&...);
         template <typename ...Args>
         void emplaceBack(Args &&...);
-        iterator erase(constIterator, sizeType = 1);
-        iterator erase(differenceType, sizeType = 1);
-        iterator erase(constIterator, constIterator);
-#ifdef OTHER_FUNCTION
-    public:
-        List get(differenceType, sizeType) const;
-        iterator beforeBegin() const;
-        constIterator beforeConstBegin() const;
-#endif
+        template <typename ...Args>
+        void emplaceFront(Args &&...);
+        void swap(List &) noexcept;
 #ifdef DEBUG_DATA_STRUCTURE_FOR_LIST
-    public:
-        node &getFirst() {
-            return this->first;
-        }
-        node &getEnd() {
-            return this->last;
-        }
+        node &getFirst() noexcept;
 #endif
     };
+    template <typename T, typename Alloc>
+    void swap(List<T, Alloc> &, List<T, Alloc> &) noexcept;
 }
 
-template <typename T, typename Alloc>
-class DataStructure::List<T, Alloc>::OutOfRange : public DataStructure::LogicException {
-public:
-    explicit OutOfRange(const char *error) : LogicException(error) {}
-    explicit OutOfRange(const std::string &error) : LogicException(error) {}
-};
-template <typename T, typename Alloc>
-class DataStructure::List<T, Alloc>::EmptyList : public DataStructure::RuntimeException {
-public:
-    explicit EmptyList(const char *error) : RuntimeException(error) {}
-    explicit EmptyList(const std::string &error) : RuntimeException(error) {}
-};
+template <typename T, typename Allocator>
+void DataStructure::swap(List<T, Allocator> &lhs, List<T, Allocator> &rhs) noexcept {
+    lhs.swap(rhs);
+}
 
-template <typename T, typename Alloc>
-template <typename ForwardIterator>
-inline void DataStructure::List<T, Alloc>::init(ForwardIterator begin, ForwardIterator end) {
-    if(begin == end) {
-        this->first->next = this->first->previous = this->last;
-        this->last->previous = this->last->next = this->first;
+template <typename T, typename Allocator>
+inline typename DataStructure::List<T, Allocator>::node DataStructure::List<T, Allocator>::getNewNode() {
+    return reinterpret_cast<node>(allocator::operator new (sizeof(nodeType)));
+}
+template <typename T, typename Allocator>
+inline void DataStructure::List<T, Allocator>::free() noexcept(
+        static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
+    if(not this->first) {
         return;
     }
-    this->first->previous = this->last;
-    this->last->next = this->first;
-    auto cursor {this->first->next = reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))};
-    while(true) {
-        cursor->next = reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)));
-        cursor->next->previous = cursor;
-        cursor->data = *begin++;
-        cursor = cursor->next;
-        auto save {begin};
-        ++save;
-        if(save == end) {
-            break;
-        }
-    }
-    cursor->next = this->last;
-    cursor->data = *begin;
-    this->last->previous = cursor;
-}
-template <typename T, typename Alloc>
-inline typename DataStructure::List<T, Alloc>::differenceType
-DataStructure::List<T, Alloc>::getDifference(constIterator position) {
-    return [&]() -> differenceType {
-        auto begin {this->constBegin()};
-        differenceType difference {0};
-        while(position not_eq begin) {
-            ++begin;
-            ++difference;
-        }
-        return difference;
-    }();
-}
-template <typename T, typename Alloc>
-template <typename ForwardIterator>
-inline void DataStructure::List<T, Alloc>::
-        assignGeneric(ForwardIterator begin, ForwardIterator end) {
     auto cursor {this->first->next};
-    while(cursor not_eq this->last and begin not_eq end) {
-        cursor->data = *begin++;
+    while(cursor not_eq this->first) {
+        auto temp {cursor};
         cursor = cursor->next;
+        allocator::operator delete (temp);
     }
-    if(cursor not_eq this->last) {
-        cursor->previous->next = this->last;
-        this->last->previous = cursor->previous;
-        while(true) {
-            auto next {cursor->next};
-            Alloc::operator delete (cursor);
-            cursor = next;
-            if(cursor == this->last) {
-                return;
-            }
-        }
+}
+template <typename T, typename Allocator>
+inline void DataStructure::List<T, Allocator>::setLink(sizeType size, constReference value, node first) {
+    auto newNode {List::getNewNode()};
+    newNode->previous = first;
+    const auto backup {newNode};
+    while(--size) {
+        new (&newNode->data) valueType(value);
+        newNode->next = List::getNewNode();
+        newNode->next->previous = newNode;
+        newNode = newNode->next;
     }
-    if(begin == end) {
-        return;
+    new (&newNode->data) valueType(value);
+    newNode->next = first->next;
+    first->next->previous = newNode;
+    first->next = backup;
+}
+template <typename T, typename Allocator>
+template <typename InputIterator,
+                typename DataStructure::__DataStructure_isInputIterator<InputIterator>::__result *
+         >
+inline void DataStructure::List<T, Allocator>::setLink(
+        typename __DataStructure_isInputIterator<InputIterator>::__result first,
+        InputIterator last, node firstNode
+) {
+    auto newNode {List::getNewNode()};
+    newNode->previous = firstNode;
+    const auto backup {newNode};
+    --last;
+    while(first not_eq last) {
+        new (&newNode->data) valueType(*first++);
+        newNode->next = List::getNewNode();
+        newNode->next->previous = newNode;
+        newNode = newNode->next;
     }
-    if(cursor == this->last) {
-        cursor = cursor->previous;
-    }
-    while(begin not_eq end) {
-        cursor->next = reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)));
-        cursor->next->previous = cursor;
-        cursor = cursor->next;
-        cursor->data = *begin++;
-    }
-    cursor->next = this->last;
-    this->last->previous = cursor;
+    new (&newNode->data) valueType(*last);
+    newNode->next = firstNode->next;
+    firstNode->next->previous = newNode;
+    firstNode->next = backup;
 }
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc>::List() :
-        first {reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))},
-        last {reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))} {
-    this->first->next = this->first->previous = this->last;
-    this->last->next = this->last->previous = this->first;
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator>::List() :
+        first {List::getNewNode()} {
+    this->first->next = this->first;
+    this->first->previous = this->first;
 }
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc>::List(sizeType size, constReference value) :
-        first {reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))},
-        last {reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))} {
-    this->first->previous = this->last;
-    this->last->next = this->first;
-    if(not size) {
-        this->first->next = this->last;
-        this->last->previous = this->first;
-        return;
-    }
-    auto cursor {this->first->next = reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))};
-    cursor->previous = this->first;
-    for(auto i {1}; i < size; ++i) {
-        cursor->next = reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)));
-        cursor->next->previous = cursor;
-        cursor->data = value;
-        cursor = cursor->next;
-    }
-    cursor->data = value;
-    cursor->next = this->last;
-    this->last->previous = cursor;
-}
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc>::List(sizeType size) : List(size, valueType()) {}
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc>::List(pointer begin, pointer end) :
-        first {reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))},
-        last {reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))} {
-    this->init(begin, end);
-}
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc>::List(iterator begin, iterator end) :
-        first {reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))},
-        last {reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))} {
-    this->init(begin, end);
-}
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc>::List(std::initializer_list<valueType> list) :
-        first {reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))},
-        last {reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))} {
-    this->init(list.begin(), list.end());
-}
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc>::List(const List &other) :
-        List(other.constBegin(), other.constEnd()) {}
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc>::List(List &&other) noexcept :
-        List(other.first, other.last) {
-    other.first = other.last = nullptr;
-}
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc>::~List() {
-    this->clear();
-    Alloc::operator delete (this->first);
-    Alloc::operator delete (this->last);
-}
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc> &DataStructure::List<T, Alloc>::operator=(const List &other) {
-    if(this == &other) {
-        return *this;
-    }
-    this->clear();
-    this->init(other.constBegin(), other.constEnd());
-    return *this;
-}
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc> &DataStructure::List<T, Alloc>::operator=(List &&other) noexcept {
-    if(this == &other) {
-        return *this;
-    }
-    this->clear();
-    Alloc::operator delete (this->first);
-    Alloc::operator delete (this->last);
-    this->first = other.first;
-    this->last = other.last;
-    return *this;
-}
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc> &
-DataStructure::List<T, Alloc>::operator=(std::initializer_list<valueType> list) {
-    this->clear();
-    this->init(list.begin(), list.end());
-    return *this;
-}
-template <typename T, typename Alloc>
-inline bool DataStructure::List<T, Alloc>::operator==(const List &other) const {
-    return this->size() == other.size() and [](const List &a, const List &b) -> bool {
-        auto begin {a.constBegin()};
-        for(auto &c : b) {
-            if(*begin++ not_eq c) {
-                return false;
-            }
-        }
-        return true;
-    }(*this, other);
-}
-template <typename T, typename Alloc>
-bool DataStructure::List<T, Alloc>::operator not_eq(const List &other) const {
-    return not(*this == other);
-}
-template <typename T, typename Alloc>
-inline bool DataStructure::List<T, Alloc>::operator<(const List &other) const {
-    auto thisSize {this->size()};
-    auto otherSize {other.size()};
-    if(otherSize not_eq thisSize) {
-        return thisSize < otherSize;
-    }
-    return [](const List &a, const List &b) -> bool {
-        auto begin {b.constBegin()};
-        for(auto &c : a) {
-            if(c not_eq *begin) {
-                return c < *begin;
-            }
-            ++begin;
-        }
-        return true;
-    }(*this, other);
-}
-template <typename T, typename Alloc>
-bool DataStructure::List<T, Alloc>::operator<=(const List &other) const {
-    return *this < other or *this == other;
-}
-template <typename T, typename Alloc>
-inline bool DataStructure::List<T, Alloc>::operator>(const List &other) const {
-    return not(*this < other);
-}
-template <typename T, typename Alloc>
-bool DataStructure::List<T, Alloc>::operator>=(const List &other) const {
-    return *this > other or *this == other;
-}
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc>::operator bool() const {
-    return this->size() not_eq 0;
-}
-template <typename T, typename Alloc>
-void DataStructure::List<T, Alloc>::assign(sizeType size, constReference value) {
-    auto cursor {this->first->next};
-    while(cursor not_eq this->last and size) {
-        cursor->data = value;
-        cursor = cursor->next;
-        --size;
-    }
-    if(cursor not_eq this->last) {
-        cursor->previous->next = this->last;
-        this->last->previous = cursor->previous;
-        while(true) {
-            auto next {cursor->next};
-            Alloc::operator delete (cursor);
-            cursor = next;
-            if(cursor == this->last) {
-                return;
-            }
-        }
-    }
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator>::List(sizeType size, constReference value) : List() {
     if(not size) {
         return;
     }
-    if(cursor == this->last) {
-        cursor = cursor->previous;
-    }
-    for(auto i {0}; i < size; ++i) {
-        cursor->next = reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)));
-        cursor->next->previous = cursor;
-        cursor = cursor->next;
-        cursor->data = value;
-    }
-    cursor->next = this->last;
-    this->last->previous = cursor;
+    this->setLink(size, value, this->first);
 }
-template <typename T, typename Alloc>
-inline void DataStructure::List<T, Alloc>::assign(iterator begin, iterator end) {
-    auto cursor {this->first->next};
-    while(cursor not_eq this->last and begin not_eq end) {
-        cursor->data = *begin++;
-        cursor = cursor->next;
-    }
-    if(cursor not_eq this->last) {
-        cursor->previous->next = this->last;
-        this->last->previous = cursor->previous;
-        while(true) {
-            auto next {cursor->next};
-            Alloc::operator delete (cursor);
-            cursor = next;
-            if(cursor == this->last) {
-                return;
-            }
-        }
-    }
-    if(begin == end) {
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator>::List(sizeType size) : List(size, valueType()) {}
+template <typename T, typename Allocator>
+template <typename InputIterator,
+                typename DataStructure::__DataStructure_isInputIterator<InputIterator>::__result *
+         >
+DataStructure::List<T, Allocator>::List(
+        typename __DataStructure_isInputIterator<InputIterator>::__result first, InputIterator last
+) : List() {
+    if(not IteratorDifference<InputIterator>()(first, last)) {
         return;
     }
-    if(cursor == this->last) {
-        cursor = cursor->previous;
+    this->setLink(first, last, this->first);
+}
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator>::List(std::initializer_list<valueType> list) : List(list.begin(), list.end()) {}
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator>::List(const List &rhs) : List(rhs.cbegin(), rhs.cend()) {}
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator>::List(List &&rhs) noexcept : first {rhs.first} {
+    rhs.first = nullptr;
+}
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator>::~List() {
+    this->free();
+    allocator::operator delete (this->first);
+}
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator> &DataStructure::List<T, Allocator>::operator=(const List &rhs) {
+    if(&rhs == this) {
+        return *this;
     }
-    while(begin not_eq end) {
-        cursor->next = reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)));
-        cursor->next->previous = cursor;
-        cursor = cursor->next;
-        cursor->data = *begin++;
+    this->free();
+    this->first->next = this->first;
+    this->first->previous = this->first;
+    this->setLink(rhs.cbegin(), rhs.cend(), this->first);
+    return *this;
+}
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator> &DataStructure::List<T, Allocator>::operator=(List &&rhs) noexcept {
+    if(&rhs == this) {
+        return *this;
     }
-    cursor->next = this->last;
-    this->last->previous = cursor;
+    this->free();
+    this->first = rhs.first;
+    rhs.first = nullptr;
+    return *this;
 }
-template <typename T, typename Alloc>
-void DataStructure::List<T, Alloc>::assign(std::initializer_list<valueType> list) {
-    this->assignGeneric(list.begin(), list.end());
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator> &
+DataStructure::List<T, Allocator>::operator=(std::initializer_list<valueType> list) {
+    *this = List(list.begin(), list.end());
+    return *this;
 }
-template <typename T, typename Alloc>
-void DataStructure::List<T, Alloc>::assign(pointer begin, pointer end) {
-    this->assignGeneric(begin, end);
+template <typename T, typename Allocator>
+bool DataStructure::List<T, Allocator>::operator==(const List &rhs) const {
+    return this->size() == rhs.size() and [](const List &lhs, const List &rhs) -> bool {
+        auto lhsEnd {lhs.cend()};
+        for(auto rhsIt {rhs.cbegin()}, lhsIt {lhs.cbegin()}; lhsIt not_eq lhsEnd; ++rhsIt, ++lhsIt) {
+            if(*lhsIt == *rhsIt) {
+                continue;
+            }
+            return false;
+        }
+        return true;
+    }(*this, rhs);
 }
-template <typename T, typename Alloc>
-typename DataStructure::List<T, Alloc>::valueType DataStructure::List<T, Alloc>::front() const {
+template <typename T, typename Allocator>
+bool DataStructure::List<T, Allocator>::operator!=(const List &rhs) const {
+    return not(*this == rhs);
+}
+template <typename T, typename Allocator>
+bool DataStructure::List<T, Allocator>::operator<(const List &rhs) const {
+    const auto lhsSize {this->size()};
+    const auto rhsSize {rhs.size()};
+    if(lhsSize <= rhsSize) {
+        auto lhsEnd {this->cend()};
+        for(auto rhsIt {rhs.cbegin()}, lhsIt {this->cbegin()}; lhsIt not_eq lhsEnd; ++rhsIt, ++lhsIt) {
+            if(*lhsIt == *rhsIt) {
+                continue;
+            }
+            return *lhsIt < *rhsIt;
+        }
+        return true;
+    }
+    auto rhsEnd {rhs.cend()};
+    for(auto rhsIt {rhs.cbegin()}, lhsIt {this->cbegin()}; rhsIt not_eq rhsEnd; ++rhsIt, ++lhsIt) {
+        if(*lhsIt == *rhsIt) {
+            continue;
+        }
+        return *lhsIt < *rhsIt;
+    }
+    return false;
+}
+template <typename T, typename Allocator>
+bool DataStructure::List<T, Allocator>::operator<=(const List &rhs) const {
+    return *this < rhs or *this == rhs;
+}
+template <typename T, typename Allocator>
+bool DataStructure::List<T, Allocator>::operator>(const List &rhs) const {
+    return not(*this <= rhs);
+}
+template <typename T, typename Allocator>
+bool DataStructure::List<T, Allocator>::operator>=(const List &rhs) const {
+    return not(*this < rhs);
+}
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator>::operator bool() const noexcept {
+    return this->first->next == this->first;
+}
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator> DataStructure::List<T, Allocator>::operator+() const {
+    auto temp {*this};
+    for(auto &c : temp) {
+        c = +c;
+    }
+    return temp;
+}
+template <typename T, typename Allocator>
+DataStructure::List<T, Allocator> DataStructure::List<T, Allocator>::operator-() const {
+    auto temp {*this};
+    for(auto &c : temp) {
+        c = -c;
+    }
+    return temp;
+}
+template <typename T, typename Allocator>
+inline void DataStructure::List<T, Allocator>::resetFirst() noexcept {
+    this->first->next = this->first;
+    this->first->previous = this->first;
+}
+template <typename T, typename Allocator>
+void DataStructure::List<T, Allocator>::assign(sizeType size, constReference value) {
+    this->free();
+    this->resetFirst();
+    this->setLink(size, value, this->first);
+}
+template <typename T, typename Allocator>
+template <typename InputIterator,
+        typename DataStructure::__DataStructure_isInputIterator<InputIterator>::__result *
+>
+void DataStructure::List<T, Allocator>::assign(
+        typename __DataStructure_isInputIterator<InputIterator>::__result first, InputIterator last
+) {
+    this->free();
+    this->resetFirst();
+    this->setLink(first, last, this->first);
+}
+template <typename T, typename Allocator>
+void DataStructure::List<T, Allocator>::assign(std::initializer_list<valueType> list) {
+    this->assign(list.begin(), list.end());
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::valueType DataStructure::List<T, Allocator>::front() const {
     return this->first->next->data;
 }
-template <typename T, typename Alloc>
-typename DataStructure::List<T, Alloc>::valueType DataStructure::List<T, Alloc>::back() const {
-    return this->last->previous->data;
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::valueType DataStructure::List<T, Allocator>::back() const {
+    return this->first->previous->data;
 }
-template <typename T, typename Alloc>
-bool DataStructure::List<T, Alloc>::empty() const {
-    return this->first->next == this->last;
-}
-template <typename T, typename Alloc>
-inline typename DataStructure::List<T, Alloc>::sizeType
-DataStructure::List<T, Alloc>::size() const {
-    auto cursor {this->first};
-    sizeType size {0};
-    while(cursor->next not_eq this->last) {
-        ++size;
-        cursor = cursor->next;
-    }
-    return size;
-}
-template <typename T, typename Alloc>
-inline typename DataStructure::List<T, Alloc>::iterator
-DataStructure::List<T, Alloc>::begin() const {
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::begin() const noexcept {
     return iterator(this->first->next);
 }
-template <typename T, typename Alloc>
-typename DataStructure::List<T, Alloc>::constIterator
-DataStructure::List<T, Alloc>::constBegin() const {
-    return this->begin();
-}
-template <typename T, typename Alloc>
-inline typename DataStructure::List<T, Alloc>::iterator
-DataStructure::List<T, Alloc>::end() const {
-    return iterator(this->last);
-}
-template <typename T, typename Alloc>
-typename DataStructure::List<T, Alloc>::constIterator
-DataStructure::List<T, Alloc>::constEnd() const {
-    return this->end();
-}
-template <typename T, typename Alloc>
-inline void DataStructure::List<T, Alloc>::clear() {
-    auto cursor {this->first->next};
-    while(cursor not_eq this->last) {
-        auto next {cursor->next};
-        Alloc::operator delete (cursor);
-        cursor = next;
-    }
-    this->first->next = this->last;
-    this->last->previous = this->first;
-}
-template <typename T, typename Alloc>
-void DataStructure::List<T, Alloc>::pushBack(constReference value) {
-    this->insert(value, this->size());
-}
-template <typename T, typename Alloc>
-void DataStructure::List<T, Alloc>::pushBack(rightValueReference value) {
-    this->insert(std::move(value), this->size());
-}
-template <typename T, typename Alloc>
-void DataStructure::List<T, Alloc>::pushFront(constReference value) {
-    this->insert(value, 0);
-}
-template <typename T, typename Alloc>
-void DataStructure::List<T, Alloc>::pushFront(rightValueReference value) {
-    this->insert(std::move(value), 0);
-}
-template <typename T, typename Alloc>
-void DataStructure::List<T, Alloc>::popFront() {
-    this->erase(0);
-}
-template <typename T, typename Alloc>
-void DataStructure::List<T, Alloc>::popBack() {
-    this->erase(this->size() - 1);
-}
-template <typename T, typename Alloc>
-inline typename DataStructure::List<T, Alloc>::iterator
-DataStructure::List<T, Alloc>::insert(
-        constReference value, differenceType position, sizeType size
-) {
-    if(position > this->size() or position < 0) {
-        throw OutOfRange("The position is out of range!");
-    }
-    if(not size) {
-        return [=](differenceType position) -> iterator {
-            auto cursor {this->first};
-            while(position--) {
-                cursor = cursor->next;
-            }
-            return iterator(cursor);
-        }(position);
-    }
-    auto cursor {this->first};
-    while(--position) {
-        cursor = cursor->next;
-    }
-    auto returnNode {cursor};
-    auto next {cursor->next};
-    while(--size) {
-        auto newNode {reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))};
-        newNode->previous = cursor;
-        newNode->data = value;
-        cursor->next = newNode;
-        cursor = cursor->next;
-    }
-    cursor->next = reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)));
-    cursor->next->previous = cursor;
-    cursor = cursor->next;
-    cursor->data = value;
-    cursor->next = next;
-    next->previous = cursor;
-    return iterator(returnNode->next);
-}
-template <typename T, typename Alloc>
-inline typename DataStructure::List<T, Alloc>::iterator
-DataStructure::List<T, Alloc>::insert(
-        rightValueReference value, differenceType position, sizeType size
-) {
-    if(position > this->size() or position < 0) {
-        throw OutOfRange("The position is out of range!");
-    }
-    if(not size) {
-        return [=](differenceType position) -> iterator {
-            auto cursor {this->first};
-            while(position--) {
-                cursor = cursor->next;
-            }
-            return iterator(cursor);
-        }(position);
-    }
-    auto cursor {this->first};
-    while(--position) {
-        cursor = cursor->next;
-    }
-    auto returnNode {cursor};
-    auto next {cursor->next};
-    while(--size) {
-        auto newNode {reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)))};
-        newNode->previous = cursor;
-        newNode->data = value;
-        cursor->next = newNode;
-        cursor = cursor->next;
-    }
-    cursor->next = reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)));
-    cursor->next->previous = cursor;
-    cursor = cursor->next;
-    cursor->data = std::move(value);
-    cursor->next = next;
-    next->previous = cursor;
-    return iterator(returnNode->next);
-}
-template <typename T, typename Alloc>
-typename DataStructure::List<T, Alloc>::iterator DataStructure::List<T, Alloc>::
-        insert(constIterator position, constReference value, sizeType size) {
-    return this->insert(value, this->getDifference(position), size);
-}
-template <typename T, typename Alloc>
-typename DataStructure::List<T, Alloc>::iterator
-DataStructure::List<T, Alloc>::insert(
-        constIterator position, rightValueReference value, sizeType size
-) {
-    return this->insert(std::move(value), this->getDifference(position), size);
-}
-template <typename T, typename Alloc>
-template <typename ForwardIterator>
-inline typename DataStructure::List<T, Alloc>::iterator
-DataStructure::List<T, Alloc>::insert(
-        constIterator position, ForwardIterator begin, ForwardIterator end
-) {
-    auto pos {this->getDifference(position)};
-    auto cursor {this->first};
-    while(pos--) {
-        cursor = cursor->next;
-    }
-    auto next {cursor->next};
-    while(begin not_eq end) {
-        cursor->next = reinterpret_cast<node>(Alloc::operator new (sizeof(Node<T>)));
-        cursor->next->previous = cursor;
-        cursor = cursor->next;
-        cursor->data = *begin++;
-    }
-    cursor->next = next;
-    next->previous = cursor;
-    iterator returnPosition {position};
-    ++returnPosition;
-    return std::move(returnPosition);
-}
-template <typename T, typename Alloc>
-typename DataStructure::List<T, Alloc>::iterator DataStructure::List<T, Alloc>::
-        insert(constIterator position, std::initializer_list<valueType> list) {
-    return this->insert(position, list.begin(), list.end());
-}
-template <typename T, typename Alloc>
-template <typename ...Args>
-typename DataStructure::List<T, Alloc>::iterator
-DataStructure::List<T, Alloc>::emplace(constIterator position, Args &&...args) {
-    return this->insert(position, typename removeReference<T>::type(args...));
-}
-template <typename T, typename Alloc>
-template <typename ...Args>
-void DataStructure::List<T, Alloc>::emplaceFront(Args &&...args) {
-    this->insert(this->begin(), typename removeReference<T>::type(args)...);
-}
-template <typename T, typename Alloc>
-template <typename ...Args>
-void DataStructure::List<T, Alloc>::emplaceBack(Args &&...args) {
-    this->insert(this->end(), typename removeReference<T>::type(args)...);
-}
-template <typename T, typename Alloc>
-typename DataStructure::List<T, Alloc>::iterator
-DataStructure::List<T, Alloc>::erase(differenceType position, sizeType size) {
-    auto cursor {this->first};
-    while(position--) {
-        cursor = cursor->next;
-    }
-    auto save {cursor};
-    cursor = cursor->next;
-    while(size--) {
-        auto next {cursor->next};
-        Alloc::operator delete (cursor);
-        cursor = next;
-    }
-    save->next = cursor;
-    cursor->previous = save;
-    return iterator(save->next);
-}
-template <typename T, typename Alloc>
-typename DataStructure::List<T, Alloc>::iterator
-DataStructure::List<T, Alloc>::erase(constIterator position, sizeType size) {
-    return this->erase(this->getDifference(position), size);
-}
-template <typename T, typename Alloc>
-typename DataStructure::List<T, Alloc>::iterator
-DataStructure::List<T, Alloc>::erase(constIterator begin, constIterator end) {
-    return this->erase(this->getDifference(begin),
-                [](iterator begin, constIterator &end) -> sizeType {
-        sizeType size {0};
-        while(begin not_eq end) {
-            ++begin;
-            ++size;
-        }
-        return size;
-    }(static_cast<iterator>(begin), end));
-}
-#ifdef OTHER_FUNCTION
-template <typename T, typename Alloc>
-DataStructure::List<T, Alloc>
-DataStructure::List<T, Alloc>::get(differenceType position, sizeType size) const {
-    auto begin {this->first};
-    while(position--) {
-        begin = begin->next;
-    }
-    auto end {begin};
-    while(size--) {
-        end = end->next;
-    }
-    return List(iterator(begin), iterator(end));
-}
-template <typename T, typename Alloc>
-typename DataStructure::List<T, Alloc>::iterator
-DataStructure::List<T, Alloc>::beforeBegin() const {
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::end() const noexcept {
     return iterator(this->first);
 }
-template <typename T, typename Alloc>
-typename DataStructure::List<T, Alloc>::constIterator
-DataStructure::List<T, Alloc>::beforeConstBegin() const {
-    return iterator(this->first);
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::constIterator
+DataStructure::List<T, Allocator>::cbegin() const noexcept {
+    return constIterator(reinterpret_cast<constNodeType *>(this->first->next));
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::constIterator
+DataStructure::List<T, Allocator>::cend() const noexcept {
+    return constIterator(reinterpret_cast<constNodeType *>(this->first));
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::reverseIterator
+DataStructure::List<T, Allocator>::rbegin() const noexcept {
+    return reverseIterator(this->first->previous);
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::reverseIterator
+DataStructure::List<T, Allocator>::rend() const noexcept {
+    return reverseIterator(this->first);
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::constReverseIterator
+DataStructure::List<T, Allocator>::crbegin() const noexcept {
+    return constReverseIterator(reinterpret_cast<constNodeType *>(this->first->previous));
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::constReverseIterator
+DataStructure::List<T, Allocator>::crend() const noexcept {
+    return constReverseIterator(reinterpret_cast<constNodeType *>(this->first));
+}
+template <typename T, typename Allocator>
+bool DataStructure::List<T, Allocator>::empty() const noexcept {
+    return this->operator bool();
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::sizeType DataStructure::List<T, Allocator>::size() const noexcept {
+    sizeType count {0};
+    auto cursor {this->first};
+    while(cursor->next not_eq this->first) {
+        ++count;
+        cursor = cursor->next;
+    }
+    return count;
+}
+template <typename T, typename Allocator>
+void DataStructure::List<T, Allocator>::clear() noexcept(
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
+    this->free();
+    this->resetFirst();
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::insert(differenceType index, constReference value, sizeType size) {
+    auto cursor {this->first};
+    while(index--) {
+        cursor = cursor->next;
+    }
+    this->setLink(size, value, cursor);
+    return iterator(cursor->next);
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::insert(constIterator position, constReference value, sizeType size) {
+    return this->insert(IteratorDifference<iterator>()(this->cbegin(), position), value, size);
+}
+template <typename T, typename Allocator>
+template <typename InputIterator,
+        typename DataStructure::__DataStructure_isInputIterator<InputIterator>::__result *
+>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::insert(
+        differenceType index,
+        typename __DataStructure_isInputIterator<InputIterator>::__result first,
+        InputIterator last
+) {
+    auto cursor {this->first};
+    while(index--) {
+        cursor = cursor->next;
+    }
+    this->setLink(first, last, cursor);
+    return iterator(cursor->next);
+}
+template <typename T, typename Allocator>
+template <typename InputIterator,
+        typename DataStructure::__DataStructure_isInputIterator<InputIterator>::__result *
+>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::insert(constIterator position,
+        typename __DataStructure_isInputIterator<InputIterator>::__result first,
+        InputIterator last
+) {
+    return this->insert(IteratorDifference<iterator>()(this->cbegin(), position), first, last);
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::insert(differenceType index, rightValueReference value) {
+    auto cursor {this->first};
+    while(index--) {
+        cursor = cursor->next;
+    }
+    auto newNode {List::getNewNode()};
+    new (&newNode->data) valueType(value);
+    newNode->next = cursor->next;
+    newNode->previous = cursor;
+    cursor->next->previous = newNode;
+    cursor->next = newNode;
+    return iterator(newNode);
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::insert(constIterator position, rightValueReference value) {
+    return this->insert(IteratorDifference<constIterator>()(this->cbegin(), position), value);
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::insert(differenceType index, std::initializer_list<valueType> list) {
+    return this->insert(index, list.begin(), list.end());
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::insert(constIterator position, std::initializer_list<valueType> list) {
+    return this->insert(IteratorDifference<constIterator>()(this->cbegin(), position), list.begin(), list.end());
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::erase(differenceType index, sizeType size) noexcept(
+        static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
+    auto cursor {this->first};
+    while(--index) {
+        cursor = cursor->next;
+    }
+    auto eraseCursor {cursor->next};
+    while(size--) {
+        auto next {eraseCursor->next};
+        delete eraseCursor;
+        eraseCursor = next;
+    }
+    eraseCursor->previous = cursor;
+    cursor->next = eraseCursor;
+    return iterator(cursor);
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::erase(constIterator position, sizeType size) noexcept(
+        static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
+    return this->erase(IteratorDifference<constIterator>()(this->cbegin(), position), size);
+}
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::erase(constIterator first, constIterator last) noexcept(
+        static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
+    IteratorDifference<constIterator> iteratorDifference;
+    return this->erase(iteratorDifference(this->cbegin(), first), iteratorDifference(first, last));
+}
+template <typename T, typename Allocator>
+template <typename ...Args>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::emplace(differenceType index, Args &&...args) {
+    return insert(index, valueType(std::forward<Args>(args)...));
+}
+template <typename T, typename Allocator>
+template <typename ...Args>
+typename DataStructure::List<T, Allocator>::iterator
+DataStructure::List<T, Allocator>::emplace(constIterator position, Args &&...args) {
+    return insert(IteratorDifference<constIterator>()(this->cbegin(), position),
+                    valueType(std::forward<Args>(args)...)
+                 );
+}
+template <typename T, typename Allocator>
+template <typename ...Args>
+void DataStructure::List<T, Allocator>::emplaceFront(Args &&...args) {
+    this->pushFront(valueType(std::forward<Args>(args)...));
+}
+template <typename T, typename Allocator>
+template <typename ...Args>
+void DataStructure::List<T, Allocator>::emplaceBack(Args &&...args) {
+    this->pushBack(valueType(std::forward<Args>(args)...));
+}
+template <typename T, typename Allocator>
+void DataStructure::List<T, Allocator>::swap(List &rhs) noexcept {
+    using std::swap;
+    swap(this->first, rhs.first);
+}
+template <typename T, typename Allocator>
+void DataStructure::List<T, Allocator>::pushFront(constReference value) {
+    auto newNode {List::getNewNode()};
+    newNode->previous = this->first;
+    newNode->next = this->first->next;
+    this->first->next->previous = newNode;
+    this->first->next = newNode;
+    new (&newNode->data) valueType(value);
+}
+template <typename T, typename Allocator>
+void DataStructure::List<T, Allocator>::pushFront(rightValueReference value) {
+    auto newNode {List::getNewNode()};
+    newNode->previous = this->first;
+    newNode->next = this->first->next;
+    this->first->next->previous = newNode;
+    this->first->next = newNode;
+    new (&newNode->data) valueType(value);
+}
+template <typename T, typename Allocator>
+void DataStructure::List<T, Allocator>::pushBack(constReference value) {
+    auto newNode {List::getNewNode()};
+    newNode->next = this->first;
+    newNode->previous = this->first->previous;
+    this->first->previous->next = newNode;
+    this->first->previous = newNode;
+    new (&newNode->data) valueType(value);
+}
+template <typename T, typename Allocator>
+void DataStructure::List<T, Allocator>::pushBack(rightValueReference value) {
+    auto newNode {List::getNewNode()};
+    newNode->next = this->first;
+    newNode->previous = this->first->previous;
+    this->first->previous->next = newNode;
+    this->first->previous = newNode;
+    new (&newNode->data) valueType(value);
+}
+template <typename T, typename Allocator>
+#ifdef POP_GET_OBJECT
+typename DataStructure::List<T, Allocator>::valueType
+#else
+void
+#endif
+DataStructure::List<T, Allocator>::popBack() noexcept(
+        static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
+    auto pop {this->first->previous};
+    this->first->previous = pop->previous;
+    pop->previous->next = this->first;
+#ifdef POP_GET_OBJECT
+    auto value {move(pop->data)};
+#endif
+    delete pop;
+#ifdef POP_GET_OBJECT
+    return value;
+#endif
+}
+template <typename T, typename Allocator>
+#ifdef POP_GET_OBJECT
+typename DataStructure::List<T, Allocator>::valueType
+#else
+void
+#endif
+DataStructure::List<T, Allocator>::popFront() noexcept(
+        static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
+    auto pop {this->first->next};
+    pop->next->previous = this->first;
+    this->first->next = pop->next;
+#ifdef POP_GET_OBJECT
+    auto value {move(pop->data)};
+#endif
+    delete pop;
+#ifdef POP_GET_OBJECT
+    return value;
+#endif
+}
+
+#ifdef DEBUG_DATA_STRUCTURE_FOR_LIST
+template <typename T, typename Allocator>
+typename DataStructure::List<T, Allocator>::node &DataStructure::List<T, Allocator>::getFirst() noexcept {
+    return this->first;
 }
 #endif
 
