@@ -2,12 +2,11 @@
 #define DATA_STRUCTURE_VECTOR_HPP
 
 #include "../Allocator.hpp"
+#include "../Iterator.hpp"
 
 namespace DataStructure {
     template <typename T, typename Alloc = Allocator<T>>
     class Vector final {
-    public:
-        class Iterator;
     public:
         using allocator = Alloc;
         using sizeType = typename allocator::sizeType;
@@ -18,19 +17,15 @@ namespace DataStructure {
         using rightValueReference = typename allocator::rightValueReference;
         using pointer = typename allocator::pointer;
         using constPointer = typename allocator::constPointer;
-        using iterator = Iterator;
-        using constIterator = const Iterator;
+        using iterator = __DataStructure_WrapIterator<valueType, pointer, reference>;
+        using constIterator = __DataStructure_WrapIterator<valueType, constPointer, constReference>;
+        using reverseIterator = __DataStructure_ReverseIterator<iterator>;
+        using constReverseIterator = __DataStructure_ReverseIterator<constIterator>;
     private:
         allocator alloc;
     private:
         void checkAllocator(sizeType);
         pointer insertAuxiliary(differenceType, sizeType);
-    private:
-        template <typename InputIterator>
-        static typename DataStructure::__DataStructure_IteratorTraits<InputIterator, static_cast<bool>(
-                        typename DataStructure::__DataStructure_typeTraits<InputIterator>::is_POD_type()
-                )>::differenceType
-        iteratorDifference(InputIterator, InputIterator) noexcept;
     public:
         Vector();
         explicit Vector(const allocator &);
@@ -56,13 +51,13 @@ namespace DataStructure {
         reference operator[](differenceType) &;
         constReference operator[](differenceType) const &;
         bool operator==(const Vector &) const;
-        bool operator not_eq(const Vector &) const;
+        bool operator!=(const Vector &) const;
         bool operator<(const Vector &) const;
         bool operator<=(const Vector &) const;
         bool operator>(const Vector &) const;
         bool operator>=(const Vector &) const;
-        Vector &operator+();
-        Vector &operator-();
+        Vector operator+() const;
+        Vector operator-() const;
         explicit operator bool() const noexcept;
         explicit operator pointer() const & noexcept;
     public:
@@ -79,10 +74,14 @@ namespace DataStructure {
         valueType back() const;
         pointer data() & noexcept;
         constPointer data() const & noexcept;
-        iterator begin() & noexcept;
-        constIterator constBegin() const & noexcept;
-        iterator end() & noexcept;
-        constIterator constEnd() const & noexcept;
+        iterator begin() const noexcept;
+        constIterator cbegin() const noexcept;
+        iterator end() const noexcept;
+        constIterator cend() const noexcept;
+        reverseIterator rbegin() const noexcept;
+        constReverseIterator crbegin() const noexcept;
+        reverseIterator rend() const noexcept;
+        constReverseIterator crend() const noexcept;
         bool empty() const noexcept;
         sizeType size() const noexcept;
         sizeType capacity() const noexcept;
@@ -90,7 +89,7 @@ namespace DataStructure {
         iterator resize(sizeType);
         iterator shrinkToFit();
         void clear() noexcept(
-                static_cast<bool>(typename __DataStructure_typeTraits<valueType>::hasTrivialDestructor())
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
         );
         iterator insert(differenceType, constReference, sizeType = 1);
         iterator insert(differenceType, rightValueReference);
@@ -100,13 +99,15 @@ namespace DataStructure {
                     typename __DataStructure_isInputIterator<InputIterator>::__result * = nullptr
                  >
         iterator insert(constIterator,
-                            typename __DataStructure_isInputIterator<InputIterator>::__result, InputIterator
+                            typename __DataStructure_isInputIterator<InputIterator>::__result,
+                            InputIterator
                        );
         template <typename InputIterator,
                     typename __DataStructure_isInputIterator<InputIterator>::__result * = nullptr
                  >
         iterator insert(differenceType,
-                            typename __DataStructure_isInputIterator<InputIterator>::__result, InputIterator
+                            typename __DataStructure_isInputIterator<InputIterator>::__result,
+                            InputIterator
                        );
         iterator insert(constIterator, std::initializer_list<valueType>);
         iterator insert(differenceType, std::initializer_list<valueType>);
@@ -139,103 +140,21 @@ namespace DataStructure {
         void emplaceFront(Args &&...);
         void swap(Vector &) noexcept;
         Vector get(differenceType, sizeType) const;
+        Vector get(constIterator, sizeType) const;
         allocator getAllocator() const &;
 #ifdef DEBUG_DATA_STRUCTURE_FOR_VECTOR
     public:
         allocator &getAllocator() & noexcept;
 #endif
     };
-    template <typename T>
-    void swap(Vector<T> &, Vector<T> &) noexcept;
+    template <typename T, typename Alloc>
+    void swap(Vector<T, Alloc> &, Vector<T, Alloc> &) noexcept;
 }
 
-template <typename T, typename Allocator>
-class DataStructure::Vector<T, Allocator>::Iterator final {
-public:
-    using sizeType = typename Vector<T, Allocator>::sizeType;
-    using differenceType = typename Vector<T, Allocator>::differenceType;
-    using valueType = typename Vector<T, Allocator>::valueType;
-    using reference = typename Vector<T, Allocator>::reference;
-    using constReference = typename Vector<T, Allocator>::constReference;
-    using rightValueReference = typename Vector<T, Allocator>::rightValueReference;
-    using pointer = typename Vector<T, Allocator>::pointer;
-    using constPointer = typename Vector<T, Allocator>::constPointer;
-    using iteratorTag = RandomAccessIterator;
-private:
-    pointer iterator;
-public:
-    constexpr Iterator() : iterator {nullptr} {}
-    explicit Iterator(pointer iterator) : iterator {iterator} {}
-    Iterator(const Iterator &) = default;
-    Iterator(Iterator &&) noexcept = default;
-    ~Iterator() = default;
-public:
-    Iterator &operator=(const Iterator &) = default;
-    Iterator &operator=(Iterator &&) noexcept = default;
-    reference operator*() noexcept {
-        return *this->iterator;
-    }
-    pointer operator->() noexcept {
-        return &**this;
-    }
-    reference operator[](differenceType index) {
-        return *(iterator + index);
-    }
-    Iterator &operator+=(differenceType index) noexcept {
-        this->iterator += index;
-        return *this;
-    }
-    Iterator &operator-=(differenceType index) noexcept {
-        return *this += -index;
-    }
-    Iterator &operator++() noexcept {
-        ++this->iterator;
-        return *this;
-    }
-    Iterator &operator--() noexcept {
-        --this->iterator;
-        return *this;
-    }
-    Iterator operator++(int) noexcept {
-        auto temp {*this};
-        ++*this;
-        return temp;
-    }
-    Iterator operator--(int) noexcept {
-        auto temp {*this};
-        --*this;
-        return temp;
-    }
-    Iterator operator+(differenceType n) const noexcept {
-        auto temp {*this};
-        temp += n;
-        return temp;
-    }
-    Iterator operator-(differenceType n) const noexcept {
-        return this->operator+(-n);
-    }
-    friend differenceType operator-(const Iterator &left, const Iterator &right) noexcept {
-        return left.iterator - right.iterator;
-    }
-    bool operator==(const Iterator &rhs) const noexcept {
-        return this->iterator == rhs.iterator;
-    }
-    bool operator not_eq (const Iterator &rhs) const noexcept {
-        return not(*this == rhs);
-    }
-    bool operator<(const Iterator &rhs) const noexcept {
-        return this->iterator < rhs.iterator;
-    }
-    bool operator<=(const Iterator &rhs) const noexcept {
-        return *this < rhs or *this == rhs;
-    }
-    bool operator>(const Iterator &rhs) const noexcept {
-        return not(*this <= rhs);
-    }
-    bool operator>=(const Iterator &rhs) const noexcept {
-        return not(*this < rhs);
-    }
-};
+template <typename T, typename Alloc>
+void DataStructure::swap(Vector<T, Alloc> &lhs, Vector<T, Alloc> &rhs) noexcept {
+    lhs.swap(rhs);
+}
 
 template <typename T, typename Allocator>
 inline void DataStructure::Vector<T, Allocator>::checkAllocator(sizeType size) {
@@ -258,21 +177,6 @@ DataStructure::Vector<T, Allocator>::insertAuxiliary(differenceType index, sizeT
     this->alloc.getCursor() = last;
     return insertPosition;
 };
-template <typename T, typename Allocator>
-template <typename InputIterator>
-inline typename DataStructure::__DataStructure_IteratorTraits<InputIterator, static_cast<bool>(
-                    typename DataStructure::__DataStructure_typeTraits<InputIterator>::is_POD_type()
-            )>::differenceType
-DataStructure::Vector<T, Allocator>::iteratorDifference(InputIterator first, InputIterator last) noexcept {
-    typename DataStructure::__DataStructure_IteratorTraits<InputIterator, static_cast<bool>(
-                    typename DataStructure::__DataStructure_typeTraits<InputIterator>::is_POD_type()
-            )>::differenceType count {0};
-    while(not(first == last)) {
-        ++first;
-        ++count;
-    }
-    return count;
-}
 template <typename T, typename Allocator>
 DataStructure::Vector<T, Allocator>::Vector() : alloc() {
     this->alloc.allocate();
@@ -300,13 +204,15 @@ DataStructure::Vector<T, Allocator>::Vector(
         typename __DataStructure_isInputIterator<InputIterator>::__result first,
         InputIterator last, const allocator &alloc
 ) : alloc(alloc) {
-    this->checkAllocator(static_cast<sizeType>(Vector::iteratorDifference(first, last)));
+    this->checkAllocator(static_cast<sizeType>(IteratorDifference<InputIterator>()(first, last)));
     while(first not_eq last) {
         this->alloc.construct(this->alloc.getCursor(), static_cast<valueType>(*first++));
     }
 }
 template <typename T, typename Allocator>
-DataStructure::Vector<T, Allocator>::Vector(std::initializer_list<valueType> list, const allocator &alloc) :
+DataStructure::Vector<T, Allocator>::Vector(
+        std::initializer_list<valueType> list, const allocator &alloc
+) :
        Vector(list.begin(), list.end(), alloc) {}
 template <typename T, typename Allocator>
 DataStructure::Vector<T, Allocator>::Vector(const Vector &rhs, const allocator &alloc) :
@@ -348,7 +254,7 @@ bool DataStructure::Vector<T, Allocator>::operator==(const Vector &rhs) const {
     }(*this, rhs);
 }
 template <typename T, typename Allocator>
-bool DataStructure::Vector<T, Allocator>::operator not_eq(const Vector &rhs) const {
+bool DataStructure::Vector<T, Allocator>::operator!=(const Vector &rhs) const {
     return not(*this == rhs);
 }
 template <typename T, typename Allocator>
@@ -385,18 +291,20 @@ bool DataStructure::Vector<T, Allocator>::operator>=(const Vector &rhs) const {
     return not(*this < rhs);
 }
 template <typename T, typename Allocator>
-DataStructure::Vector<T, Allocator> &DataStructure::Vector<T, Allocator>::operator+() {
-    for(auto &c : *this) {
+DataStructure::Vector<T, Allocator> DataStructure::Vector<T, Allocator>::operator+() const {
+    auto temp {*this};
+    for(auto &c : temp) {
         c = +c;
     }
-    return *this;
+    return temp;
 }
 template <typename T, typename Allocator>
-DataStructure::Vector<T, Allocator> &DataStructure::Vector<T, Allocator>::operator-() {
-    for(auto &c : *this) {
+DataStructure::Vector<T, Allocator> DataStructure::Vector<T, Allocator>::operator-() const {
+    auto temp {*this};
+    for(auto &c : temp) {
         c = -c;
     }
-    return *this;
+    return temp;
 }
 template <typename T, typename Allocator>
 DataStructure::Vector<T, Allocator>::operator bool() const noexcept {
@@ -407,8 +315,9 @@ DataStructure::Vector<T, Allocator>::operator pointer() const & noexcept {
     return const_cast<pointer>(this->alloc.begin());
 }
 template <typename T, typename Allocator>
-void
-DataStructure::Vector<T, Allocator>::assign(sizeType size, constReference value, const allocator &alloc) {
+void DataStructure::Vector<T, Allocator>::assign(
+        sizeType size, constReference value, const allocator &alloc
+) {
     this->alloc = alloc;
     this->checkAllocator(size);
     while(size--) {
@@ -425,7 +334,7 @@ DataStructure::Vector<T, Allocator>::assign(
         InputIterator last, const allocator &alloc
 ) {
     this->alloc = alloc;
-    this->checkAllocator(static_cast<sizeType>(Vector::iteratorDifference(first, last)));
+    this->checkAllocator(static_cast<sizeType>(IteratorDifference<InputIterator>()(first, last)));
     while(first not_eq last) {
         this->alloc.construct(this->alloc.getCursor(), static_cast<valueType>(*first++));
     }
@@ -463,23 +372,43 @@ DataStructure::Vector<T, Allocator>::data() const & noexcept {
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
-DataStructure::Vector<T, Allocator>::begin() & noexcept {
+DataStructure::Vector<T, Allocator>::begin() const noexcept {
     return iterator(this->alloc.begin());
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::constIterator
-DataStructure::Vector<T, Allocator>::constBegin() const & noexcept {
-    return static_cast<Vector *>(*this)->begin();
+DataStructure::Vector<T, Allocator>::cbegin() const noexcept {
+    return constIterator(this->alloc.begin());
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
-DataStructure::Vector<T, Allocator>::end() & noexcept {
-    return iterator(this->alloc.getCursor());
+DataStructure::Vector<T, Allocator>::end() const noexcept {
+    return iterator(const_cast<Vector *>(this)->alloc.getCursor());
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::constIterator
-DataStructure::Vector<T, Allocator>::constEnd() const & noexcept {
-    return static_cast<Vector *>(*this)->end();
+DataStructure::Vector<T, Allocator>::cend() const noexcept {
+    return constIterator(this->alloc.getCursor());
+}
+template <typename T, typename Allocator>
+typename DataStructure::Vector<T, Allocator>::reverseIterator
+DataStructure::Vector<T, Allocator>::rbegin() const noexcept {
+    return reverseIterator(this->end() - 1);
+}
+template <typename T, typename Allocator>
+typename DataStructure::Vector<T, Allocator>::constReverseIterator
+DataStructure::Vector<T, Allocator>::crbegin() const noexcept {
+    return constReverseIterator(this->cend() - 1);
+}
+template <typename T, typename Allocator>
+typename DataStructure::Vector<T, Allocator>::reverseIterator
+DataStructure::Vector<T, Allocator>::rend() const noexcept {
+    return reverseIterator(this->begin() - 1);
+}
+template <typename T, typename Allocator>
+typename DataStructure::Vector<T, Allocator>::constReverseIterator
+DataStructure::Vector<T, Allocator>::crend() const noexcept {
+    return constReverseIterator(this->cbegin() -1 );
 }
 template <typename T, typename Allocator>
 bool DataStructure::Vector<T, Allocator>::empty() const noexcept {
@@ -506,12 +435,13 @@ DataStructure::Vector<T, Allocator>::resize(sizeType size) {
     return iterator(this->alloc.resize(size));
 }
 template <typename T, typename Allocator>
-typename DataStructure::Vector<T, Allocator>::iterator DataStructure::Vector<T, Allocator>::shrinkToFit() {
+typename DataStructure::Vector<T, Allocator>::iterator
+DataStructure::Vector<T, Allocator>::shrinkToFit() {
     return iterator(this->alloc.shrinkToFit());
 }
 template <typename T, typename Allocator>
 void DataStructure::Vector<T, Allocator>::clear()
-        noexcept(__DataStructure_typeTraits<valueType>::hasTrivialDestructor()()) {
+        noexcept(__DataStructure_TypeTraits<valueType>::hasTrivialDestructor()()) {
     this->alloc.destroy(this->alloc.begin(), this->alloc.getCursor());
 }
 template <typename T, typename Allocator>
@@ -573,7 +503,7 @@ DataStructure::Vector<T, Allocator>::insert(
         }
         return iterator(this->alloc.begin() + index);
     }
-    auto size {static_cast<sizeType>(Vector::iteratorDifference(first, last))};
+    auto size {static_cast<sizeType>(IteratorDifference<InputIterator>()(first, last))};
     auto insertPosition {this->insertAuxiliary(index, size)};
     auto cursor {insertPosition};
     while(--size) {
@@ -594,12 +524,16 @@ DataStructure::Vector<T, Allocator>::insert(
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
-DataStructure::Vector<T, Allocator>::insert(differenceType index, std::initializer_list<valueType> list) {
+DataStructure::Vector<T, Allocator>::insert(
+        differenceType index, std::initializer_list<valueType> list
+) {
     return this->insert(index, list.begin(), list.end());
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
-DataStructure::Vector<T, Allocator>::insert(constIterator position, std::initializer_list<valueType> list) {
+DataStructure::Vector<T, Allocator>::insert(
+        constIterator position, std::initializer_list<valueType> list
+) {
     return this->insert(position, list.begin(), list.end());
 }
 template <typename T, typename Allocator>
@@ -659,6 +593,12 @@ typename DataStructure::Vector<T, Allocator>::valueType
 void
 #endif
 DataStructure::Vector<T, Allocator>::popBack() {
+    if(this->empty()) {
+#ifdef POP_GET_OBJECT
+        return valueType();
+#endif
+        return;
+    }
 #ifdef POP_GET_OBJECT
     auto value {move(*(this->alloc.getCursor() - 1))};
 #endif
@@ -674,6 +614,12 @@ typename DataStructure::Vector<T, Allocator>::valueType
 void
 #endif
 DataStructure::Vector<T, Allocator>::popFront() {
+    if(this->empty()) {
+#ifdef POP_GET_OBJECT
+        return valueType();
+#endif
+        return;
+    }
 #ifdef POP_GET_OBJECT
     auto value {move((*this)[0])};
 #endif
@@ -713,6 +659,11 @@ DataStructure::Vector<T, Allocator>
 DataStructure::Vector<T, Allocator>::get(differenceType index, sizeType size) const {
     const auto start {this->begin() + index};
     return Vector(start, start + size);
+}
+template <typename T, typename Allocator>
+DataStructure::Vector<T, Allocator>
+DataStructure::Vector<T, Allocator>::get(constIterator position, sizeType size) const {
+    return Vector(position, position + size);
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::allocator
