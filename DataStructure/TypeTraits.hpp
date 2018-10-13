@@ -2,29 +2,163 @@
 #define DATA_STRUCTURE_TYPETRAITS_HPP
 
 namespace DataStructure {
+    struct __DataStructure_trueType {
+        constexpr bool operator()() const noexcept {
+            return true;
+        }
+        explicit constexpr operator bool() const noexcept {
+            return true;
+        }
+    };
+    struct __DataStructure_falseType {
+        constexpr bool operator()() const noexcept {
+            return false;
+        }
+        explicit constexpr operator bool() const noexcept {
+            return false;
+        }
+    };
     template <typename T>
-    struct removePointer {
+    struct RemovePointer {
         using type = T;
     };
     template <typename T>
-    struct removePointer<T *> {
+    struct RemovePointer<T *> {
         using type = T;
     };
     template <typename T>
-    struct removePointer<const T *> {
-        using type = const T;
-    };
-    template <typename T>
-    struct removeReference {
+    struct RemovePointer<T *const> {
         using type = T;
     };
     template <typename T>
-    struct removeReference<T &> {
+    struct RemovePointer<T *volatile> {
         using type = T;
     };
     template <typename T>
-    struct removeReference<T &&> {
+    struct RemovePointer<T *const volatile> {
         using type = T;
+    };
+    template <typename T>
+    struct RemoveConst {
+        using type = T;
+    };
+    template <typename T>
+    struct RemoveConst<const T> {
+        using type = T;
+    };
+    template <typename T>
+    struct RemoveReference {
+        using type = T;
+    };
+    template <typename T>
+    struct RemoveReference<T &> {
+        using type = T;
+    };
+    template <typename T>
+    struct RemoveReference<T &&> {
+        using type = T;
+    };
+    template <typename T>
+    struct IsReference {
+        using result = __DataStructure_falseType;
+    };
+    template <typename T>
+    struct IsReference<T &> {
+        using result = __DataStructure_trueType;
+    };
+    template <typename T>
+    struct IsReference<T &&> {
+        using result = __DataStructure_trueType;
+    };
+    template <typename T>
+    struct IsLeftValueReference {
+        using result = __DataStructure_falseType;
+    };
+    template <typename T>
+    struct IsLeftValueReference<T &> {
+        using result = __DataStructure_trueType;
+    };
+    template <typename T>
+    struct IsRightValueReference {
+        using result = __DataStructure_falseType;
+    };
+    template <typename T>
+    struct IsRightValueReference<T &&> {
+        using result = __DataStructure_trueType;
+    };
+    template <typename T>
+    struct IsConst {
+        using result = __DataStructure_falseType;
+    };
+    template <typename T>
+    struct IsConst<const T> {
+        using result = __DataStructure_trueType;
+    };
+    template <typename T>
+    struct IsPointer {
+        using result = __DataStructure_falseType;
+    };
+    template <typename T>
+    struct IsPointer<T *> {
+        using result = __DataStructure_trueType;
+    };
+    template <typename T>
+    struct IsPointer<T *const> {
+        using result = __DataStructure_trueType;
+    };
+    template <typename T>
+    struct IsPointer<T *volatile> {
+        using result = __DataStructure_trueType;
+    };
+    template <typename T>
+    struct IsPointer<T *const volatile> {
+        using result = __DataStructure_trueType;
+    };
+    template <typename T>
+    struct IsConstReference {
+        using result = __DataStructure_falseType;
+    };
+    template <typename T>
+    struct IsConstReference<const T &> {
+        using result = __DataStructure_trueType;
+    };
+    template <typename T>
+    struct IsConstPointer {
+        using result = __DataStructure_falseType;
+    };
+    template <typename T>
+    struct IsConstPointer<const T *> {
+        using result = __DataStructure_trueType;
+    };
+    template <typename T, typename U>
+    struct IsSame {
+        using result = __DataStructure_falseType;
+    };
+    template <typename T>
+    struct IsSame<T, T> {
+        using result = __DataStructure_trueType;
+    };
+    template <typename T>
+    struct AddConst {
+        using result = const T;
+    };
+    template <typename T,
+                    bool = static_cast<bool>(typename IsLeftValueReference<T>::result()),
+                    bool = static_cast<bool>(typename IsRightValueReference<T>::result()),
+                    bool = static_cast<bool>(typename IsPointer<T>::result())
+             >
+    struct AddLowLevelConst {};
+    template <typename T>
+    struct AddLowLevelConst<T, true, false, false> {
+        using result = const typename RemoveReference<T>::type &;
+    };
+    template <typename T>
+    struct AddLowLevelConst<T, false, true, false> {
+        using result = const typename RemoveReference<T>::type &&;
+    };
+    template <typename T>
+    struct AddLowLevelConst<T, false, false, true> {
+        using result = const typename RemovePointer<T>::type *;
     };
     struct NotIterator {
         constexpr static bool isInputIterator {false};
@@ -68,40 +202,8 @@ namespace DataStructure {
         constexpr static bool isBidirectionalIterator {BidirectionalIterator::isBidirectionalIterator};
         constexpr static bool isRandomAccessIterator {true};
     };
-    struct __DataStructure_trueType {
-        constexpr bool operator()() const noexcept {
-            return true;
-        }
-        explicit constexpr operator bool() const noexcept {
-            return true;
-        }
-    };
-    struct __DataStructure_falseType {
-        constexpr bool operator()() const noexcept {
-            return false;
-        }
-        explicit constexpr operator bool() const noexcept {
-            return false;
-        }
-    };
     template <typename T>
-    struct __DataStructure_isPointer {
-        using result = __DataStructure_falseType;
-    };
-    template <typename T>
-    struct __DataStructure_isPointer<T *> {
-        using result = __DataStructure_trueType;
-    };
-    template <typename T>
-    struct __DataStructure_isPointer<T *&> {
-        using result = __DataStructure_trueType;
-    };
-    template <typename T>
-    struct __DataStructure_isPointer<T *const> {
-        using result = __DataStructure_trueType;
-    };
-    template <typename T>
-    struct __DataStructure_typeTraits {
+    struct __DataStructure_TypeTraits {
         using hasTrivialDefaultConstructor = __DataStructure_falseType;
         using hasTrivialCopyConstructor = __DataStructure_falseType;
         using hasTrivialMoveConstructor = __DataStructure_falseType;
@@ -111,7 +213,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_falseType;
     };
     template <typename T>
-    struct __DataStructure_typeTraits<T *> {
+    struct __DataStructure_TypeTraits<T *> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -121,7 +223,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<int> {
+    struct __DataStructure_TypeTraits<int> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -131,7 +233,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<unsigned int> {
+    struct __DataStructure_TypeTraits<unsigned int> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -141,7 +243,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<short int> {
+    struct __DataStructure_TypeTraits<short int> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -151,7 +253,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<unsigned short int> {
+    struct __DataStructure_TypeTraits<unsigned short int> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -161,7 +263,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<char> {
+    struct __DataStructure_TypeTraits<char> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -171,7 +273,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<signed char> {
+    struct __DataStructure_TypeTraits<signed char> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -181,7 +283,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<unsigned char> {
+    struct __DataStructure_TypeTraits<unsigned char> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -191,7 +293,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<char16_t> {
+    struct __DataStructure_TypeTraits<char16_t> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -201,7 +303,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<char32_t> {
+    struct __DataStructure_TypeTraits<char32_t> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -211,7 +313,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<wchar_t> {
+    struct __DataStructure_TypeTraits<wchar_t> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -221,7 +323,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<long int> {
+    struct __DataStructure_TypeTraits<long int> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -231,7 +333,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<unsigned long int> {
+    struct __DataStructure_TypeTraits<unsigned long int> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -241,7 +343,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<long long int> {
+    struct __DataStructure_TypeTraits<long long int> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -251,7 +353,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<unsigned long long int> {
+    struct __DataStructure_TypeTraits<unsigned long long int> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -261,7 +363,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<float> {
+    struct __DataStructure_TypeTraits<float> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -271,7 +373,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<double> {
+    struct __DataStructure_TypeTraits<double> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -281,7 +383,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <>
-    struct __DataStructure_typeTraits<long double> {
+    struct __DataStructure_TypeTraits<long double> {
         using hasTrivialDefaultConstructor = __DataStructure_trueType;
         using hasTrivialCopyConstructor = __DataStructure_trueType;
         using hasTrivialMoveConstructor = __DataStructure_trueType;
@@ -291,7 +393,7 @@ namespace DataStructure {
         using is_POD_type = __DataStructure_trueType;
     };
     template <typename, bool>
-    struct __DataStructure_IteratorTraits {
+    struct __DataStructure_IteratorTraitsAuxiliary {
         using sizeType = void;
         using differenceType = void;
         using valueType = void;
@@ -303,7 +405,7 @@ namespace DataStructure {
         using iteratorTag = NotIterator;
     };
     template <typename Iterator>
-    struct __DataStructure_IteratorTraits<Iterator, false> {
+    struct __DataStructure_IteratorTraitsAuxiliary<Iterator, false> {
         using sizeType = typename Iterator::sizeType;
         using differenceType = typename Iterator::differenceType;
         using valueType = typename Iterator::valueType;
@@ -315,7 +417,7 @@ namespace DataStructure {
         using iteratorTag = typename Iterator::iteratorTag;
     };
     template <typename T, bool POD>
-    struct __DataStructure_IteratorTraits<T *, POD> {
+    struct __DataStructure_IteratorTraitsAuxiliary<T *, POD> {
         using sizeType = unsigned long;
         using differenceType = long;
         using valueType = T;
@@ -326,6 +428,10 @@ namespace DataStructure {
         using constPointer = const valueType *;
         using iteratorTag = RandomAccessIterator;
     };
+    template <typename Iterator>
+    using __DataStructure_IteratorTraits = __DataStructure_IteratorTraitsAuxiliary<Iterator,
+            static_cast<bool>(typename __DataStructure_TypeTraits<Iterator>::is_POD_type())
+    >;
     template <typename, bool>
     struct __DataStructure_InputIteratorInferringAuxiliary {
         using __type = __DataStructure_falseType;
@@ -337,9 +443,7 @@ namespace DataStructure {
     template <typename Iterator>
     struct __DataStructure_isInputIterator {
         using __result = typename __DataStructure_InputIteratorInferringAuxiliary<Iterator,
-                __DataStructure_IteratorTraits<Iterator, static_cast<bool>(
-                                typename __DataStructure_typeTraits<Iterator>::is_POD_type()
-                        )>::iteratorTag::isInputIterator
+                __DataStructure_IteratorTraits<Iterator>::iteratorTag::isInputIterator
         >::__type;
     };
     template <typename, bool>
@@ -353,9 +457,7 @@ namespace DataStructure {
     template <typename Iterator>
     struct __DataStructure_isOutputIterator {
         using __result = typename __DataStructure_OutputIteratorInferringAuxiliary<Iterator,
-                __DataStructure_IteratorTraits<Iterator, static_cast<bool>(
-                        typename __DataStructure_typeTraits<Iterator>::is_POD_type()
-                )>::iteratorTag::isOutputIterator
+                __DataStructure_IteratorTraits<Iterator>::iteratorTag::isOutputIterator
         >::__type;
     };
     template <typename, bool>
@@ -369,9 +471,7 @@ namespace DataStructure {
     template <typename Iterator>
     struct __DataStructure_isForwardIterator {
         using __result = typename __DataStructure_ForwardIteratorInferringAuxiliary<Iterator,
-                __DataStructure_IteratorTraits<Iterator, static_cast<bool>(
-                        typename __DataStructure_typeTraits<Iterator>::is_POD_type()
-                )>::iteratorTag::isForwardIterator
+                __DataStructure_IteratorTraits<Iterator>::iteratorTag::isForwardIterator
         >::__type;
     };
     template <typename, bool>
@@ -385,9 +485,7 @@ namespace DataStructure {
     template <typename Iterator>
     struct __DataStructure_isBidirectionalIterator {
         using __result = typename __DataStructure_BidirectionalIteratorInferringAuxiliary<Iterator,
-                __DataStructure_IteratorTraits<Iterator, static_cast<bool>(
-                        typename __DataStructure_typeTraits<Iterator>::is_POD_type()
-                )>::iteratorTag::isBidirectionalIterator
+                __DataStructure_IteratorTraits<Iterator>::iteratorTag::isBidirectionalIterator
         >::__type;
     };
     template <typename, bool>
@@ -401,15 +499,61 @@ namespace DataStructure {
     template <typename Iterator>
     struct __DataStructure_isRandomAccessIterator {
         using __result = typename __DataStructure_RandomAccessIteratorInferringAuxiliary<Iterator,
-                __DataStructure_IteratorTraits<Iterator, static_cast<bool>(
-                        typename __DataStructure_typeTraits<Iterator>::is_POD_type()
-                )>::iteratorTag::isRandomAccessIterator
+                __DataStructure_IteratorTraits<Iterator>::iteratorTag::isRandomAccessIterator
         >::__type;
     };
     template <typename T>
-    constexpr typename removeReference<T>::type &&move(T &&value) noexcept {
-        return static_cast<typename removeReference<T>::type &&>(value);
+    constexpr typename RemoveReference<T>::type &&move(T &&value) noexcept {
+        return static_cast<typename RemoveReference<T>::type &&>(value);
     }
+    template <typename Iterator, bool>
+    struct __DataStructure_IteratorDifferenceAuxiliary {
+        static_assert(__DataStructure_IteratorTraits<Iterator>::iteratorTag::isInputIterator,
+                        "The template argument should be an input iterator at least!"
+                );
+        using differenceType = typename __DataStructure_IteratorTraits<Iterator>::differenceType;
+        differenceType operator()(Iterator first, Iterator last) const noexcept {
+            differenceType count {0};
+            while(first++ not_eq last) {
+                ++count;
+            }
+            return count;
+        }
+    };
+    template <typename Iterator>
+    struct __DataStructure_IteratorDifferenceAuxiliary<Iterator, true> {
+        static_assert(__DataStructure_IteratorTraits<Iterator>::iteratorTag::isRandomAccessIterator,
+                        "The template argument should be an iterator which is able to random accessed"
+                );
+        using differenceType = typename __DataStructure_IteratorTraits<Iterator>::differenceType;
+        differenceType operator()(Iterator first, Iterator last) const noexcept {
+            return last - first;
+        }
+    };
+    template <typename Iterator>
+    using IteratorDifference = __DataStructure_IteratorDifferenceAuxiliary<Iterator,
+                    __DataStructure_IteratorTraits<Iterator>::iteratorTag::isRandomAccessIterator
+            >;
+    template <typename T, bool = static_cast<bool>(typename IsPointer<T>::result()),
+                bool = typename IsConst<typename RemovePointer<
+                                            typename RemoveReference<T>::type
+                                       >::type>::result()()
+             >
+    struct __DataStructure_ConstOrNonConst {
+        using __result = typename RemoveConst<typename RemovePointer<T>::type>::type *;
+    };
+    template <typename T>
+    struct __DataStructure_ConstOrNonConst<T, false, false> {
+        using __result = const typename RemoveReference<T>::type &;
+    };
+    template <typename T>
+    struct __DataStructure_ConstOrNonConst<T, false, true> {
+        using __result = typename RemoveConst<typename RemoveReference<T>::type>::type &;
+    };
+    template <typename T>
+    struct __DataStructure_ConstOrNonConst<T, true, false> {
+        using __result = const typename RemovePointer<T>::type *;
+    };
 }
 
 #endif //DATA_STRUCTURE_TYPETRAITS_HPP
