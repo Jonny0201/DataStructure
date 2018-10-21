@@ -147,6 +147,13 @@ namespace DataStructure {
         node &getFirst() noexcept;
 #endif
     };
+    template <typename T, typename Allocator>
+    void swap(ForwardList<T, Allocator> &, ForwardList<T, Allocator> &) noexcept;
+}
+
+template <typename T, typename Allocator>
+void DataStructure::swap(ForwardList<T, Allocator> &lhs, ForwardList<T, Allocator> &rhs) noexcept {
+    lhs.swap(rhs);
 }
 
 template <typename T, typename Allocator>
@@ -614,6 +621,11 @@ DataStructure::ForwardList<T, Allocator>::popFront() noexcept(
 #ifdef POP_GET_OBJECT
     return value;
 #endif
+}
+template <typename T, typename Allocator>
+void DataStructure::ForwardList<T, Allocator>::swap(ForwardList &rhs) noexcept {
+    using std::swap;
+    swap(this->first, rhs.first);
 }
 
 #ifdef DEBUG_DATA_STRUCTURE_FOR_FORWARD_LIST
