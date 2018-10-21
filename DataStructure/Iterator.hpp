@@ -4,7 +4,7 @@
 #include "TypeTraits.hpp"
 
 namespace DataStructure {
-    template <typename T, typename Ptr, typename Ref>
+    template <typename T, typename Ref, typename Ptr>
     class __DataStructure_WrapIterator final {
     private:
         using thisType = __DataStructure_WrapIterator;
@@ -18,6 +18,9 @@ namespace DataStructure {
         using rightValueReference = valueType &&;
         using constPointer = const valueType *;
         using iteratorTag = RandomAccessIterator;
+    private:
+        using reverseReference = typename __DataStructure_ConstOrNonConst<reference>::__result;
+        using reversePointer = typename __DataStructure_ConstOrNonConst<pointer>::__result;
     private:
         pointer iterator;
     public:
@@ -95,6 +98,18 @@ namespace DataStructure {
         explicit operator bool() const noexcept {
             return static_cast<bool>(this->iterator);
         }
+        operator __DataStructure_WrapIterator<
+                    valueType, reverseReference, reversePointer
+                 >() const noexcept {
+            return __DataStructure_WrapIterator<valueType, reverseReference, reversePointer>(
+                    reinterpret_cast<
+                        typename __DataStructure_WrapIterator<
+                                    valueType, reverseReference, reversePointer
+                                 >::pointer
+                    >(this->iterator)
+            );
+        }
+
     };
     template <typename Iterator>
     class __DataStructure_ReverseIterator final {
@@ -106,7 +121,7 @@ namespace DataStructure {
                             "The template argument need an iterator type!"
                      );
         static_assert(traits::iteratorTag::isRandomAccessIterator,
-                            "The template argument need an iterator who can be random accessed at least!"
+                            "The template argument need an iterator who can be random accessed!"
                      );
     public:
         using sizeType = typename traits::sizeType;
@@ -198,6 +213,27 @@ namespace DataStructure {
         explicit operator bool() const noexcept {
             return static_cast<bool>(this->iterator);
         }
+        operator __DataStructure_ReverseIterator<
+                    typename __DataStructure_TemplateTypeTraits<iteratorType>::template __result<
+                                valueType,
+                                typename __DataStructure_ConstOrNonConst<reference>::__result,
+                                typename __DataStructure_ConstOrNonConst<pointer>::__result
+                             >
+                 >() const noexcept {
+            return __DataStructure_ReverseIterator<
+                        typename __DataStructure_TemplateTypeTraits<iteratorType>::template __result<
+                                valueType,
+                                typename __DataStructure_ConstOrNonConst<reference>::__result,
+                                typename __DataStructure_ConstOrNonConst<pointer>::__result
+                        >
+                   >(
+                           static_cast<typename __DataStructure_TemplateTypeTraits<iteratorType>::
+                                   template __result<valueType,
+                                       typename __DataStructure_ConstOrNonConst<reference>::__result,
+                                       typename __DataStructure_ConstOrNonConst<pointer>::__result
+                                   >>(this->iterator)
+                   );
+        }
     };
     template <typename T, typename Ref, typename Ptr>
     struct __DataStructure_ForwardNode final {
@@ -210,10 +246,14 @@ namespace DataStructure {
         );
         static_assert(
                 static_cast<bool>(
-                    typename IsSame<T, typename RemoveConst<typename RemoveReference<Ref>::type>::type>::result()
+                    typename IsSame<
+                            T, typename RemoveConst<typename RemoveReference<Ref>::type>::type
+                    >::result()
                 ) or
                 static_cast<bool>(
-                    typename IsSame<T, typename RemoveConst<typename RemoveReference<Ptr>::type>::type>::result()
+                    typename IsSame<
+                            T, typename RemoveConst<typename RemoveReference<Ptr>::type>::type
+                    >::result()
                 ),
                 "Template arguments error! "
                 "The second type must be reference-to-first_type, "
@@ -237,6 +277,67 @@ namespace DataStructure {
         link next;
         valueType data;
     };
+    template <typename NodeType>
+    class __DataStructure_ForwardListIterator {
+    private:
+        using nodeType = NodeType;
+        using thisType = __DataStructure_ForwardListIterator;
+    public:
+        using sizeType = typename nodeType::sizeType;
+        using differenceType = typename nodeType::differenceType;
+        using valueType = typename nodeType::valueType;
+        using reference = typename nodeType::reference;
+        using constReference = const valueType &;
+        using rightValueReference = valueType &&;
+        using pointer = typename nodeType::pointer;
+        using constPointer = const valueType *;
+        using iteratorTag = ForwardIterator;
+        using link = typename nodeType::link;
+    private:
+        link iterator;
+    public:
+        constexpr __DataStructure_ForwardListIterator() : iterator {nullptr} {};
+        explicit __DataStructure_ForwardListIterator(link iterator) : iterator {iterator} {}
+        __DataStructure_ForwardListIterator(const thisType &) = default;
+        __DataStructure_ForwardListIterator(thisType &&) noexcept = default;
+        ~__DataStructure_ForwardListIterator() = default;
+    public:
+        __DataStructure_ForwardListIterator &operator=(const thisType &) = default;
+        __DataStructure_ForwardListIterator &operator=(thisType &&) noexcept = default;
+        reference operator*() const noexcept {
+            return this->iterator->data;
+        }
+        pointer operator->() const noexcept {
+            return &**this;
+        }
+        thisType &operator++() noexcept {
+            this->iterator = this->iterator->next;
+            return *this;
+        }
+        thisType operator++(int) noexcept {
+            auto temp {*this};
+            ++*this;
+            return temp;
+        }
+        bool operator==(const thisType &rhs) const noexcept {
+            return this->iterator == rhs.iterator;
+        }
+        bool operator!=(const thisType &rhs) const noexcept {
+            return not(*this == rhs);
+        }
+        bool operator<(const thisType &) const noexcept = delete;
+        bool operator<=(const thisType &) const noexcept = delete;
+        bool operator>(const thisType &) const noexcept = delete;
+        bool operator>=(const thisType &) const noexcept = delete;
+        explicit operator bool() const noexcept {
+            return static_cast<bool>(this->iterator);
+        }
+        operator __DataStructure_ForwardListIterator<typename nodeType::reverseType>() const noexcept {
+            return __DataStructure_ForwardListIterator<typename nodeType::reverseType>(
+                    reinterpret_cast<typename nodeType::reverseType *>(this->iterator)
+            );
+        }
+    };
     template <typename T, typename Ref, typename Ptr>
     struct __DataStructure_BidirectionalNode final {
         static_assert(
@@ -248,10 +349,14 @@ namespace DataStructure {
         );
         static_assert(
                 static_cast<bool>(
-                    typename IsSame<T, typename RemoveConst<typename RemoveReference<Ref>::type>::type>::result()
+                    typename IsSame<
+                            T, typename RemoveConst<typename RemoveReference<Ref>::type>::type
+                    >::result()
                 ) or
                 static_cast<bool>(
-                    typename IsSame<T, typename RemoveConst<typename RemoveReference<Ptr>::type>::type>::result()
+                    typename IsSame<
+                            T, typename RemoveConst<typename RemoveReference<Ptr>::type>::type
+                    >::result()
                 ),
                 "Template arguments error! "
                 "The second type must be reference-to-first_type, "
@@ -296,13 +401,13 @@ namespace DataStructure {
         link iterator;
     public:
         constexpr __DataStructure_ListIterator() : iterator {nullptr} {}
-        explicit __DataStructure_ListIterator(nodeType *iterator) : iterator {iterator} {}
-        __DataStructure_ListIterator(const __DataStructure_ListIterator &) = default;
-        __DataStructure_ListIterator(__DataStructure_ListIterator &&) noexcept = default;
+        explicit __DataStructure_ListIterator(link iterator) : iterator {iterator} {}
+        __DataStructure_ListIterator(const thisType &) = default;
+        __DataStructure_ListIterator(thisType &&) noexcept = default;
         ~__DataStructure_ListIterator() = default;
     public:
-        __DataStructure_ListIterator &operator=(const __DataStructure_ListIterator &) = default;
-        __DataStructure_ListIterator &operator=(__DataStructure_ListIterator &&) noexcept = default;
+        __DataStructure_ListIterator &operator=(const thisType &) = default;
+        __DataStructure_ListIterator &operator=(thisType &&) noexcept = default;
         reference operator*() const noexcept {
             return this->iterator->data;
         }
@@ -367,12 +472,12 @@ namespace DataStructure {
     public:
         constexpr __DataStructure_ListReverseIterator() : iterator {nullptr} {}
         explicit __DataStructure_ListReverseIterator(nodeType *iterator) : iterator {iterator} {}
-        __DataStructure_ListReverseIterator(const __DataStructure_ListReverseIterator &) = default;
-        __DataStructure_ListReverseIterator(__DataStructure_ListReverseIterator &&) noexcept = default;
+        __DataStructure_ListReverseIterator(const thisType &) = default;
+        __DataStructure_ListReverseIterator(thisType &&) noexcept = default;
         ~__DataStructure_ListReverseIterator() = default;
     public:
-        __DataStructure_ListReverseIterator &operator=(const __DataStructure_ListReverseIterator &) = default;
-        __DataStructure_ListReverseIterator &operator=(__DataStructure_ListReverseIterator &&) noexcept = default;
+        __DataStructure_ListReverseIterator &operator=(const thisType &) = default;
+        __DataStructure_ListReverseIterator &operator=(thisType &&) noexcept = default;
         reference operator*() const noexcept {
             return this->iterator->data;
         }
