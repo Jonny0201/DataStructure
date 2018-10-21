@@ -37,15 +37,21 @@ namespace DataStructure {
         static void *operator new (sizeType);
         static void operator delete (void *) noexcept;
         static void destroy(void *) noexcept(
-                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+                    static_cast<bool>(
+                            typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+                    )
                 );
         static void destroy(void *, const void *) noexcept(
-                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+                    static_cast<bool>(
+                            typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+                    )
                 );
     private:
         void copyRHS(const Allocator &);
         void free(pointer) noexcept(
-                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+                    static_cast<bool>(
+                            typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+                    )
                 );
         void reallocate();
         void check(pointer) const;
@@ -79,11 +85,15 @@ namespace DataStructure {
         template <typename ...Args>
         pointer construct(pointer, Args &&...) &;
         pointer destroy(pointer) & noexcept(
-                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
-                );
+                    static_cast<bool>(
+                            typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+                    )
+        );
         pointer destroy(pointer, constPointer) & noexcept(
-                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
-                );
+                    static_cast<bool>(
+                            typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+                    )
+        );
         bool full() const & noexcept;
         bool empty() const & noexcept;
         sizeType size() const & noexcept;
@@ -97,7 +107,9 @@ namespace DataStructure {
         pointer shrinkToFit() &;
         void swap(Allocator &) noexcept;
         pointer clear() & noexcept(
-                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+                    static_cast<bool>(
+                            typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+                    )
                 );
 #ifdef DEBUG_DATA_STRUCTURE_FOR_ALLOCATOR
     public:
@@ -118,7 +130,7 @@ public:
 };
 
 template <typename T>
-void DataStructure::swap(Allocator<T> &lhs, Allocator<T> &rhs) noexcept {
+inline void DataStructure::swap(Allocator<T> &lhs, Allocator<T> &rhs) noexcept {
     lhs.swap(rhs);
 }
 template <typename T>
@@ -177,31 +189,41 @@ inline void DataStructure::Allocator<T>::check(pointer p) const {
     }
 }
 template <typename T>
-inline void *DataStructure::Allocator<T>::operator new (sizeType size) {
+void *DataStructure::Allocator<T>::operator new (sizeType size) {
     return ::operator new (size);
 }
 template <typename T>
-inline void DataStructure::Allocator<T>::operator delete (void *p) noexcept {
+void DataStructure::Allocator<T>::operator delete (void *p) noexcept {
     ::operator delete (p);
 }
 template <typename T>
 void DataStructure::Allocator<T>::destroy(void *p) noexcept(
-            static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+            static_cast<bool>(
+                    typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+            )
         ) {
-    Allocator::destroy(p, typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor());
+    Allocator::destroy(p,
+                    typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+               );
 }
 template <typename T>
 void DataStructure::Allocator<T>::destroy(void *first, const void *last) noexcept(
-            static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+            static_cast<bool>(
+                    typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+            )
         ) {
-    Allocator::destroy(first, last, typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor());
+    Allocator::destroy(first, last,
+                    typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+               );
 }
 template <typename T>
 constexpr DataStructure::Allocator<T>::Allocator() : allocateSize {0}, first {nullptr},
         cursor {nullptr} {}
 template <typename T>
 DataStructure::Allocator<T>::Allocator(const Allocator<T> &rhs) : allocateSize {rhs.allocateSize},
-        first {reinterpret_cast<pointer>(Allocator::operator new (sizeof(valueType) * this->allocateSize))},
+        first {reinterpret_cast<pointer>(
+                    Allocator::operator new (sizeof(valueType) * this->allocateSize))
+              },
         cursor {this->first} {
     this->copyRHS(rhs);
 }
@@ -217,7 +239,9 @@ DataStructure::Allocator<T>::~Allocator() {
 template <typename T>
 DataStructure::Allocator<T> &DataStructure::Allocator<T>::operator=(const Allocator &rhs) & {
     auto temp {this->first};
-    this->first = reinterpret_cast<pointer>(Allocator::operator new (sizeof(valueType) * rhs.allocateSize));
+    this->first = reinterpret_cast<pointer>(
+            Allocator::operator new (sizeof(valueType) * rhs.allocateSize)
+    );
     this->free(temp);
     this->cursor = this->first;
     this->allocateSize = rhs.allocateSize;
@@ -280,8 +304,10 @@ typename DataStructure::Allocator<T>::pointer DataStructure::Allocator<T>::alloc
 template <typename T>
 typename DataStructure::Allocator<T>::pointer
 DataStructure::Allocator<T>::construct(pointer p, constReference value) & noexcept(
-            static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDefaultConstructor())
-        ) {
+            static_cast<bool>(
+                    typename __DataStructure_TypeTraits<valueType>::hasTrivialDefaultConstructor()
+            )
+) {
     this->check(p);
     new (p) valueType(value);
     if(p == this->cursor) {
@@ -292,8 +318,10 @@ DataStructure::Allocator<T>::construct(pointer p, constReference value) & noexce
 template <typename T>
 typename DataStructure::Allocator<T>::pointer
 DataStructure::Allocator<T>::construct(pointer p, rightValueReference value) & noexcept(
-            static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDefaultConstructor())
-        ) {
+            static_cast<bool>(
+                    typename __DataStructure_TypeTraits<valueType>::hasTrivialDefaultConstructor()
+            )
+) {
     this->check(p);
     new (p) valueType(move(value));
     if(p == this->cursor) {
@@ -323,7 +351,9 @@ typename DataStructure::Allocator<T>::pointer
 DataStructure::Allocator<T>::destroy(pointer first, constPointer last) & noexcept(
             static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
         ) {
-    Allocator::destroy(first, last, typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor());
+    Allocator::destroy(
+            first, last, typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+    );
     if(this->cursor == last) {
         this->cursor = first;
     }
@@ -334,27 +364,32 @@ bool DataStructure::Allocator<T>::full() const & noexcept {
     return this->cursor - this->first == static_cast<differenceType>(this->allocateSize);
 }
 template <typename T>
-inline bool DataStructure::Allocator<T>::empty() const & noexcept {
+bool DataStructure::Allocator<T>::empty() const & noexcept {
     return this->cursor == this->first;
 }
 template <typename T>
-typename DataStructure::Allocator<T>::sizeType DataStructure::Allocator<T>::size() const & noexcept {
+typename DataStructure::Allocator<T>::sizeType
+DataStructure::Allocator<T>::size() const & noexcept {
     return static_cast<sizeType>(this->cursor - this->first);
 }
 template <typename T>
-typename DataStructure::Allocator<T>::sizeType DataStructure::Allocator<T>::capacity() const & noexcept {
+typename DataStructure::Allocator<T>::sizeType
+DataStructure::Allocator<T>::capacity() const & noexcept {
     return this->allocateSize;
 }
 template <typename T>
-typename DataStructure::Allocator<T>::sizeType DataStructure::Allocator<T>::reserve() const & noexcept {
+typename DataStructure::Allocator<T>::sizeType
+DataStructure::Allocator<T>::reserve() const & noexcept {
     return static_cast<sizeType>(this->end() - this->cursor);
 }
 template <typename T>
-typename DataStructure::Allocator<T>::pointer DataStructure::Allocator<T>::begin() const & noexcept {
+typename DataStructure::Allocator<T>::pointer
+DataStructure::Allocator<T>::begin() const & noexcept {
     return this->first;
 }
 template <typename T>
-typename DataStructure::Allocator<T>::constPointer DataStructure::Allocator<T>::getCursor() const & noexcept{
+typename DataStructure::Allocator<T>::constPointer
+DataStructure::Allocator<T>::getCursor() const & noexcept{
     return this->cursor;
 }
 template <typename T>
@@ -362,7 +397,7 @@ typename DataStructure::Allocator<T>::pointer &DataStructure::Allocator<T>::getC
     return this->cursor;
 }
 template <typename T>
-inline typename DataStructure::Allocator<T>::constPointer
+typename DataStructure::Allocator<T>::constPointer
 DataStructure::Allocator<T>::end() const & noexcept {
     return this->first + static_cast<differenceType>(this->allocateSize);
 }
@@ -400,7 +435,8 @@ typename DataStructure::Allocator<T>::pointer DataStructure::Allocator<T>::clear
         return this->cursor;
     }
     Allocator::destroy(
-            this->first, this->cursor, typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+            this->first, this->cursor,
+            typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
     );
     this->cursor = this->first;
     return this->cursor;
