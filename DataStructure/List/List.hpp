@@ -33,7 +33,9 @@ namespace DataStructure {
         static node getNewNode();
     private:
         void free() noexcept(
-                    static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+                    static_cast<bool>(
+                            typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+                    )
                 );
         void setLink(sizeType, constReference, node);
         template <typename InputIterator,
@@ -98,24 +100,32 @@ namespace DataStructure {
                 typename __DataStructure_isInputIterator<InputIterator>::__result * = nullptr
         >
         iterator insert(constIterator,
-                        typename __DataStructure_isInputIterator<InputIterator>::__result, InputIterator
+                        typename __DataStructure_isInputIterator<InputIterator>::__result,
+                        InputIterator
         );
         template <typename InputIterator,
                 typename __DataStructure_isInputIterator<InputIterator>::__result * = nullptr
         >
         iterator insert(differenceType,
-                        typename __DataStructure_isInputIterator<InputIterator>::__result, InputIterator
+                        typename __DataStructure_isInputIterator<InputIterator>::__result,
+                        InputIterator
         );
         iterator insert(constIterator, std::initializer_list<valueType>);
         iterator insert(differenceType, std::initializer_list<valueType>);
         iterator erase(constIterator, sizeType = 1) noexcept(
-                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+                static_cast<bool>(
+                        typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+                )
         );
         iterator erase(differenceType, sizeType = 1) noexcept(
-                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+                static_cast<bool>(
+                        typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+                )
         );
         iterator erase(constIterator, constIterator) noexcept(
-                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+                static_cast<bool>(
+                        typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+                )
         );
         void pushBack(constReference);
         void pushBack(rightValueReference);
@@ -174,7 +184,7 @@ inline void DataStructure::List<T, Allocator>::free() noexcept(
     while(cursor not_eq this->first) {
         auto temp {cursor};
         cursor = cursor->next;
-        allocator::operator delete (temp);
+        delete temp;
     }
 }
 template <typename T, typename Allocator>
@@ -204,14 +214,14 @@ inline void DataStructure::List<T, Allocator>::setLink(
     auto newNode {List::getNewNode()};
     newNode->previous = firstNode;
     const auto backup {newNode};
-    --last;
-    while(first not_eq last) {
-        new (&newNode->data) valueType(*first++);
+    auto size {IteratorDifference<InputIterator>()(first, last)};
+    while(--size) {
+        new (&newNode->data) valueType(*static_cast<valueType>(first++));
         newNode->next = List::getNewNode();
         newNode->next->previous = newNode;
         newNode = newNode->next;
     }
-    new (&newNode->data) valueType(*last);
+    new (&newNode->data) valueType(*static_cast<valueType>(first));
     newNode->next = firstNode->next;
     firstNode->next->previous = newNode;
     firstNode->next = backup;
@@ -244,7 +254,8 @@ DataStructure::List<T, Allocator>::List(
     this->setLink(first, last, this->first);
 }
 template <typename T, typename Allocator>
-DataStructure::List<T, Allocator>::List(std::initializer_list<valueType> list) : List(list.begin(), list.end()) {}
+DataStructure::List<T, Allocator>::List(std::initializer_list<valueType> list)
+        : List(list.begin(), list.end()) {}
 template <typename T, typename Allocator>
 DataStructure::List<T, Allocator>::List(const List &rhs) : List(rhs.cbegin(), rhs.cend()) {}
 template <typename T, typename Allocator>
@@ -262,8 +273,7 @@ DataStructure::List<T, Allocator> &DataStructure::List<T, Allocator>::operator=(
         return *this;
     }
     this->free();
-    this->first->next = this->first;
-    this->first->previous = this->first;
+    this->resetFirst();
     this->setLink(rhs.cbegin(), rhs.cend(), this->first);
     return *this;
 }
@@ -273,6 +283,7 @@ DataStructure::List<T, Allocator> &DataStructure::List<T, Allocator>::operator=(
         return *this;
     }
     this->free();
+    allocator::operator delete (this->first);
     this->first = rhs.first;
     rhs.first = nullptr;
     return *this;
@@ -280,7 +291,9 @@ DataStructure::List<T, Allocator> &DataStructure::List<T, Allocator>::operator=(
 template <typename T, typename Allocator>
 DataStructure::List<T, Allocator> &
 DataStructure::List<T, Allocator>::operator=(std::initializer_list<valueType> list) {
-    *this = List(list.begin(), list.end());
+    this->free();
+    this->resetFirst();
+    this->setLink(list.begin(), list.end(), this->first);
     return *this;
 }
 template <typename T, typename Allocator>
@@ -362,9 +375,16 @@ inline void DataStructure::List<T, Allocator>::resetFirst() noexcept {
 }
 template <typename T, typename Allocator>
 void DataStructure::List<T, Allocator>::assign(sizeType size, constReference value) {
-    this->free();
-    this->resetFirst();
-    this->setLink(size, value, this->first);
+    auto cursor {this->first};
+    while(cursor->next not_eq this->first and size) {
+        cursor = cursor->next;
+        allocator::destroy(&cursor->data);
+        new (&cursor->data) valueType(value);
+        --size;
+    }
+    if(size) {
+        this->setLink(size, value, cursor);
+    }
 }
 template <typename T, typename Allocator>
 template <typename InputIterator,
@@ -373,9 +393,17 @@ template <typename InputIterator,
 void DataStructure::List<T, Allocator>::assign(
         typename __DataStructure_isInputIterator<InputIterator>::__result first, InputIterator last
 ) {
-    this->free();
-    this->resetFirst();
-    this->setLink(first, last, this->first);
+    auto cursor {this->first};
+    auto size {IteratorDifference<InputIterator>()(first, last)};
+    while(cursor->next not_eq this->first and size) {
+        cursor = cursor->next;
+        allocator::destroy(&cursor->data);
+        new (&cursor->data) valueType(static_cast<valueType>(*first++));
+        --size;
+    }
+    if(size) {
+        this->setLink(first, last, cursor);
+    }
 }
 template <typename T, typename Allocator>
 void DataStructure::List<T, Allocator>::assign(std::initializer_list<valueType> list) {
@@ -434,7 +462,8 @@ bool DataStructure::List<T, Allocator>::empty() const noexcept {
     return this->operator bool();
 }
 template <typename T, typename Allocator>
-typename DataStructure::List<T, Allocator>::sizeType DataStructure::List<T, Allocator>::size() const noexcept {
+typename DataStructure::List<T, Allocator>::sizeType
+DataStructure::List<T, Allocator>::size() const noexcept {
     sizeType count {0};
     auto cursor {this->first};
     while(cursor->next not_eq this->first) {
@@ -521,7 +550,9 @@ DataStructure::List<T, Allocator>::insert(differenceType index, std::initializer
 template <typename T, typename Allocator>
 typename DataStructure::List<T, Allocator>::iterator
 DataStructure::List<T, Allocator>::insert(constIterator position, std::initializer_list<valueType> list) {
-    return this->insert(IteratorDifference<constIterator>()(this->cbegin(), position), list.begin(), list.end());
+    return this->insert(
+                IteratorDifference<constIterator>()(this->cbegin(), position), list.begin(), list.end()
+           );
 }
 template <typename T, typename Allocator>
 typename DataStructure::List<T, Allocator>::iterator
