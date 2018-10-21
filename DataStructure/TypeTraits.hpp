@@ -514,7 +514,8 @@ namespace DataStructure {
         using differenceType = typename __DataStructure_IteratorTraits<Iterator>::differenceType;
         differenceType operator()(Iterator first, Iterator last) const noexcept {
             differenceType count {0};
-            while(first++ not_eq last) {
+            while(first not_eq last) {
+                ++first;
                 ++count;
             }
             return count;
@@ -553,6 +554,14 @@ namespace DataStructure {
     template <typename T>
     struct __DataStructure_ConstOrNonConst<T, true, false> {
         using __result = const typename RemovePointer<T>::type *;
+    };
+    template <typename T>
+    struct __DataStructure_TemplateTypeTraits {};
+    template <template <typename ...>
+                class S, typename ...Args>
+    struct __DataStructure_TemplateTypeTraits<S<Args...>> {
+        template <typename ...ResultArgs>
+        using __result = S<ResultArgs...>;
     };
 }
 
