@@ -17,8 +17,8 @@ namespace DataStructure {
         using rightValueReference = typename allocator::rightValueReference;
         using pointer = typename allocator::pointer;
         using constPointer = typename allocator::constPointer;
-        using iterator = __DataStructure_WrapIterator<valueType, pointer, reference>;
-        using constIterator = __DataStructure_WrapIterator<valueType, constPointer, constReference>;
+        using iterator = __DataStructure_WrapIterator<valueType, reference, pointer>;
+        using constIterator = __DataStructure_WrapIterator<valueType, constReference, constPointer>;
         using reverseIterator = __DataStructure_ReverseIterator<iterator>;
         using constReverseIterator = __DataStructure_ReverseIterator<constIterator>;
     private:
@@ -363,7 +363,7 @@ DataStructure::Vector<T, Allocator>::back() const {
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::pointer
 DataStructure::Vector<T, Allocator>::data() & noexcept {
-    return this->pointer();
+    return this->operator pointer();
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::constPointer
@@ -440,8 +440,9 @@ DataStructure::Vector<T, Allocator>::shrinkToFit() {
     return iterator(this->alloc.shrinkToFit());
 }
 template <typename T, typename Allocator>
-void DataStructure::Vector<T, Allocator>::clear()
-        noexcept(__DataStructure_TypeTraits<valueType>::hasTrivialDestructor()()) {
+void DataStructure::Vector<T, Allocator>::clear() noexcept(
+        static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
     this->alloc.destroy(this->alloc.begin(), this->alloc.getCursor());
 }
 template <typename T, typename Allocator>
@@ -478,12 +479,12 @@ DataStructure::Vector<T, Allocator>::insert(differenceType index, rightValueRefe
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
 DataStructure::Vector<T, Allocator>::insert(constIterator position, constReference value, sizeType size) {
-    return this->insert(position - iterator(this->alloc.begin()), value, size);
+    return this->insert(position - constIterator(this->alloc.begin()), value, size);
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
 DataStructure::Vector<T, Allocator>::insert(constIterator position, rightValueReference value) {
-    return this->insert(position - iterator(this->alloc.begin()), value);
+    return this->insert(position - constIterator(this->alloc.begin()), value);
 }
 template <typename T, typename Allocator>
 template <typename InputIterator,
@@ -520,7 +521,7 @@ DataStructure::Vector<T, Allocator>::insert(
         constIterator position, typename __DataStructure_isInputIterator<InputIterator>::__result first,
         InputIterator last
 ) {
-    return this->insert(position - iterator(this->alloc.begin()), first, last);
+    return this->insert(position - constIterator(this->alloc.begin()), first, last);
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
@@ -563,7 +564,7 @@ DataStructure::Vector<T, Allocator>::erase(differenceType index, sizeType size) 
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
 DataStructure::Vector<T, Allocator>::erase(constIterator position, sizeType size) {
-    return this->erase(position - iterator(this->alloc.begin()), size);
+    return this->erase(position - constIterator(this->alloc.begin()), size);
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
@@ -572,10 +573,12 @@ DataStructure::Vector<T, Allocator>::erase(constIterator first, constIterator la
 }
 template <typename T, typename Allocator>
 void DataStructure::Vector<T, Allocator>::pushBack(constReference value) {
+    this->checkAllocator(this->size() + 1);
     this->alloc.construct(this->alloc.getCursor(), value);
 }
 template <typename T, typename Allocator>
 void DataStructure::Vector<T, Allocator>::pushBack(rightValueReference value) {
+    this->checkAllocator(this->size() + 1);
     this->alloc.construct(this->alloc.getCursor(), value);
 }
 template <typename T, typename Allocator>
