@@ -81,6 +81,42 @@ public:
     int c;
     long d;
 };
+template <typename T, typename ...Args>
+struct tuple : tuple<Args...> {
+    T t;
+protected:
+    template <unsigned long N>
+    decltype(auto) __get_aux() const noexcept {
+        if constexpr(not N) {
+            return this->t;
+        }
+        return tuple<Args...>::template __get_aux<N - 1>();
+    }
+public:
+    explicit tuple(const T &t, Args &&...args) : t {t}, tuple<Args...>(std::forward<Args>(args)...) {}
+    void print() const noexcept override {
+        tuple<Args...>::print();
+        std::cout << this->t << std::endl;
+    }
+    template <unsigned long N>
+    decltype(auto) get() const noexcept {
+        return this->__get_aux<N>();
+    }
+};
+template <typename T>
+struct tuple<T> {
+    T t;
+protected:
+    template <unsigned long>
+    T __get_aux() const noexcept {
+        return this->t;
+    }
+public:
+    explicit tuple(const T &t) : t {t} {}
+    virtual void print() const noexcept {
+        std::cout << this->t << std::endl;
+    }
+};
 int main(int argc, char *argv[]) {
     auto x {reinterpret_cast<long *>(__memory_pool_prototype::operator new (sizeof(long)))};
     *x = 10;
@@ -98,4 +134,6 @@ int main(int argc, char *argv[]) {
     std::cout << f << std::endl;
     __memory_pool_prototype::operator delete (f, sizeof *f);
     __deallocate_memory_pool();
+    tuple<int, char, double> f(1, 'f', 9.9);
+    std::cout << f.get<2>();
 }
