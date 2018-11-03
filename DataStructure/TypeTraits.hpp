@@ -433,6 +433,23 @@ namespace DataStructure {
             static_cast<bool>(typename __DataStructure_TypeTraits<Iterator>::is_POD_type())
     >;
     template <typename, bool>
+    struct __DataStructure_NotIteratorInferringAuxiliary {
+        using __type = __DataStructure_falseType;
+    };
+    template <typename T>
+    struct __DataStructure_NotIteratorInferringAuxiliary<T, false> {
+        using __type = T;
+    };
+    template <typename Iterator>
+    struct __DataStructure_isNotIterator {
+        using __result = typename __DataStructure_NotIteratorInferringAuxiliary<
+                                    Iterator,
+                                    __DataStructure_IteratorTraits<Iterator>::iteratorTag::isInputIterator
+                                    or
+                                    __DataStructure_IteratorTraits<Iterator>::iteratorTag::isOutputIterator
+                                  >::__type;
+    };
+    template <typename, bool>
     struct __DataStructure_InputIteratorInferringAuxiliary {
         using __type = __DataStructure_falseType;
     };
@@ -563,6 +580,28 @@ namespace DataStructure {
         template <typename ...ResultArgs>
         using __result = S<ResultArgs...>;
     };
+    template <bool, unsigned long N, typename ...Args>
+    struct __DataStructure_VariableTemplateArgumentTraitsAuxiliary {};
+    template <unsigned long N, typename T, typename ...Args>
+    struct __DataStructure_VariableTemplateArgumentTraitsAuxiliary<true, N, T, Args...> {
+        using __result = T;
+    };
+    template <unsigned long N, typename T, typename ...Args>
+    struct __DataStructure_VariableTemplateArgumentTraitsAuxiliary<false, N, T, Args...> {
+        using __result = typename __DataStructure_VariableTemplateArgumentTraitsAuxiliary<
+                                            N == sizeof...(Args), N, Args...
+                                    >::__result;
+    };
+    template <unsigned long N, typename ...Args>
+    using __DataStructure_FlipVariableTemplateArgumentTraits = typename
+        __DataStructure_VariableTemplateArgumentTraitsAuxiliary<
+            N == sizeof...(Args), N, Args...
+        >::__result;
+    template <unsigned long N, typename ...Args>
+    using __DataStructure_VariableTemplateArgumentTraits = typename
+        __DataStructure_FlipVariableTemplateArgumentTraits<
+            sizeof...(Args) - N, Args...
+        >::__result;
 }
 
 #endif //DATA_STRUCTURE_TYPETRAITS_HPP
