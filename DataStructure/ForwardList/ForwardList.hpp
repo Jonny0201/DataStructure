@@ -183,7 +183,17 @@ inline void DataStructure::ForwardList<T, Allocator>::setLink(
     auto newNode {ForwardList::getNewNode()};
     const auto backup {newNode};
     while(--size) {
-        new (&newNode->data) valueType(value);
+        try {
+            new (&newNode->data) valueType(value);
+        }catch(...) {
+            while(backup not_eq newNode) {
+                auto next {backup->next};
+                delete backup;
+                backup = next;
+            }
+            allocator::operator delete (newNode);
+            throw;
+        }
         newNode->next = ForwardList::getNewNode();
         newNode = newNode->next;
     }
@@ -203,7 +213,17 @@ inline void DataStructure::ForwardList<T, Allocator>::setLink(
     const auto backup {newNode};
     auto size {IteratorDifference<InputIterator>()(first, last)};
     while(--size) {
-        new (&newNode->data) valueType(static_cast<valueType>(*first++));
+        try {
+            new (&newNode->data) valueType(static_cast<valueType>(*first++));
+        }catch(...) {
+            while(backup not_eq newNode) {
+                auto next {backup->next};
+                delete backup;
+                backup = next;
+            }
+            allocator::operator delete (newNode);
+            throw;
+        }
         newNode->next = ForwardList::getNewNode();
         newNode = newNode->next;
     }
@@ -479,7 +499,7 @@ DataStructure::ForwardList<T, Allocator>::insertAfter(differenceType index, righ
         cursor = cursor->next;
     }
     auto newNode {ForwardList::getNewNode()};
-    new (&newNode->data) valueType(value);
+    new (&newNode->data) valueType(move(value));
     newNode->next = cursor->next;
     cursor->next = newNode;
     return iterator(newNode);
@@ -489,7 +509,7 @@ typename DataStructure::ForwardList<T, Allocator>::iterator
 DataStructure::ForwardList<T, Allocator>::insertAfter(
         constIterator position, rightValueReference value
 ) {
-    return this->insertAfter(IteratorDifference<constIterator>()(this->cbegin(), position), value);
+    return this->insertAfter(IteratorDifference<constIterator>()(this->cbegin(), position), move(value));
 }
 template <typename T, typename Allocator>
 template <typename InputIterator,
@@ -600,7 +620,7 @@ void DataStructure::ForwardList<T, Allocator>::pushFront(rightValueReference val
     auto newNode {ForwardList::getNewNode()};
     newNode->next = this->first->next;
     this->first->next = newNode;
-    new (&newNode->data) valueType(value);
+    new (&newNode->data) valueType(move(value));
 }
 template <typename T, typename Allocator>
 #ifdef POP_GET_OBJECT
