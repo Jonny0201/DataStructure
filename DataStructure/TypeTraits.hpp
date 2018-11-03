@@ -520,8 +520,18 @@ namespace DataStructure {
         >::__type;
     };
     template <typename T>
-    constexpr typename RemoveReference<T>::type &&move(T &&value) noexcept {
+    inline constexpr typename RemoveReference<T>::type &&move(T &&value) noexcept {
         return static_cast<typename RemoveReference<T>::type &&>(value);
+    }
+    template <typename T>
+    inline constexpr T &&forward(typename RemoveReference<T>::type &value) noexcept {
+        return static_cast<T &&>(value);
+    }
+    template <typename T>
+    inline constexpr T &&forward(typename RemoveReference<T>::type &&value) noexcept {
+        static_assert(not static_cast<bool>(typename IsLeftValueReference<T>::result()),
+                        "Trying forwarding a right value as a left value!");
+        return static_cast<T &&>(value);
     }
     template <typename Iterator, bool>
     struct __DataStructure_IteratorDifferenceAuxiliary {
