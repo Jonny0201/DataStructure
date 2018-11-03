@@ -193,7 +193,17 @@ inline void DataStructure::List<T, Allocator>::setLink(sizeType size, constRefer
     newNode->previous = first;
     const auto backup {newNode};
     while(--size) {
-        new (&newNode->data) valueType(value);
+        try {
+            new (&newNode->data) valueType(value);
+        }catch(...) {
+            while(backup not_eq newNode) {
+                auto next {backup->next};
+                delete backup;
+                backup = next;
+            }
+            allocator::operator delete (newNode);
+            throw;
+        }
         newNode->next = List::getNewNode();
         newNode->next->previous = newNode;
         newNode = newNode->next;
@@ -216,7 +226,17 @@ inline void DataStructure::List<T, Allocator>::setLink(
     const auto backup {newNode};
     auto size {IteratorDifference<InputIterator>()(first, last)};
     while(--size) {
-        new (&newNode->data) valueType(*static_cast<valueType>(first++));
+        try {
+            new (&newNode->data) valueType(static_cast<valueType>(*first++));
+        }catch(...) {
+            while(backup not_eq newNode) {
+                auto next {backup->next};
+                delete backup;
+                backup = next;
+            }
+            allocator::operator delete (newNode);
+            throw;
+        }
         newNode->next = List::getNewNode();
         newNode->next->previous = newNode;
         newNode = newNode->next;
@@ -410,11 +430,13 @@ void DataStructure::List<T, Allocator>::assign(std::initializer_list<valueType> 
     this->assign(list.begin(), list.end());
 }
 template <typename T, typename Allocator>
-typename DataStructure::List<T, Allocator>::valueType DataStructure::List<T, Allocator>::front() const {
+typename DataStructure::List<T, Allocator>::valueType
+DataStructure::List<T, Allocator>::front() const {
     return this->first->next->data;
 }
 template <typename T, typename Allocator>
-typename DataStructure::List<T, Allocator>::valueType DataStructure::List<T, Allocator>::back() const {
+typename DataStructure::List<T, Allocator>::valueType
+DataStructure::List<T, Allocator>::back() const {
     return this->first->previous->data;
 }
 template <typename T, typename Allocator>
@@ -474,7 +496,9 @@ DataStructure::List<T, Allocator>::size() const noexcept {
 }
 template <typename T, typename Allocator>
 void DataStructure::List<T, Allocator>::clear() noexcept(
-                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+                static_cast<bool>(
+                        typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor()
+                )
 ) {
     this->free();
     this->resetFirst();
@@ -530,7 +554,7 @@ DataStructure::List<T, Allocator>::insert(differenceType index, rightValueRefere
         cursor = cursor->next;
     }
     auto newNode {List::getNewNode()};
-    new (&newNode->data) valueType(value);
+    new (&newNode->data) valueType(move(value));
     newNode->next = cursor->next;
     newNode->previous = cursor;
     cursor->next->previous = newNode;
@@ -540,7 +564,7 @@ DataStructure::List<T, Allocator>::insert(differenceType index, rightValueRefere
 template <typename T, typename Allocator>
 typename DataStructure::List<T, Allocator>::iterator
 DataStructure::List<T, Allocator>::insert(constIterator position, rightValueReference value) {
-    return this->insert(IteratorDifference<constIterator>()(this->cbegin(), position), value);
+    return this->insert(IteratorDifference<constIterator>()(this->cbegin(), position), move(value));
 }
 template <typename T, typename Allocator>
 typename DataStructure::List<T, Allocator>::iterator
@@ -633,7 +657,7 @@ void DataStructure::List<T, Allocator>::pushFront(rightValueReference value) {
     newNode->next = this->first->next;
     this->first->next->previous = newNode;
     this->first->next = newNode;
-    new (&newNode->data) valueType(value);
+    new (&newNode->data) valueType(move(value));
 }
 template <typename T, typename Allocator>
 void DataStructure::List<T, Allocator>::pushBack(constReference value) {
@@ -651,7 +675,7 @@ void DataStructure::List<T, Allocator>::pushBack(rightValueReference value) {
     newNode->previous = this->first->previous;
     this->first->previous->next = newNode;
     this->first->previous = newNode;
-    new (&newNode->data) valueType(value);
+    new (&newNode->data) valueType(move(value));
 }
 template <typename T, typename Allocator>
 #ifdef POP_GET_OBJECT
