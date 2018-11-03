@@ -102,7 +102,7 @@ namespace DataStructure {
         pointer begin() const & noexcept;
         constPointer getCursor() const & noexcept;
         pointer &getCursor() & noexcept;
-        constPointer end() const & noexcept;
+        pointer end() const & noexcept;
         pointer resize(sizeType) &;
         pointer shrinkToFit() &;
         void swap(Allocator &) noexcept;
@@ -239,9 +239,14 @@ DataStructure::Allocator<T>::~Allocator() {
 template <typename T>
 DataStructure::Allocator<T> &DataStructure::Allocator<T>::operator=(const Allocator &rhs) & {
     auto temp {this->first};
-    this->first = reinterpret_cast<pointer>(
-            Allocator::operator new (sizeof(valueType) * rhs.allocateSize)
-    );
+    try {
+        this->first = reinterpret_cast<pointer>(
+                Allocator::operator new (sizeof(valueType) * rhs.allocateSize)
+        );
+    }catch(...) {
+        this->first = temp;
+        throw;
+    }
     this->free(temp);
     this->cursor = this->first;
     this->allocateSize = rhs.allocateSize;
@@ -285,7 +290,7 @@ DataStructure::Allocator<T>::operator bool() const noexcept {
 template <typename T>
 typename DataStructure::Allocator<T>::pointer DataStructure::Allocator<T>::allocate(sizeType size) & {
     if(not size) {
-        size = sizeof(valueType) < 128 ? 64 : 8;
+        size = sizeof(valueType) < 128ul ? 64ul : 8ul;
     }
     if(this->first) {
         if(size <= this->allocateSize) {
@@ -397,7 +402,7 @@ typename DataStructure::Allocator<T>::pointer &DataStructure::Allocator<T>::getC
     return this->cursor;
 }
 template <typename T>
-typename DataStructure::Allocator<T>::constPointer
+typename DataStructure::Allocator<T>::pointer
 DataStructure::Allocator<T>::end() const & noexcept {
     return this->first + static_cast<differenceType>(this->allocateSize);
 }
