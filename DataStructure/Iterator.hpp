@@ -111,7 +111,7 @@ namespace DataStructure {
         }
 
     };
-    template <typename Iterator>
+    template <typename Iterator, typename ReverseType>
     class __DataStructure_ReverseIterator final {
     private:
         using traits = __DataStructure_IteratorTraitsAuxiliary<Iterator, static_cast<bool>(
@@ -123,6 +123,7 @@ namespace DataStructure {
         static_assert(traits::iteratorTag::isRandomAccessIterator,
                             "The template argument need an iterator who can be random accessed!"
                      );
+        using reverseType = ReverseType;
     public:
         using sizeType = typename traits::sizeType;
         using differenceType = typename traits::differenceType;
@@ -213,26 +214,8 @@ namespace DataStructure {
         explicit operator bool() const noexcept {
             return static_cast<bool>(this->iterator);
         }
-        operator __DataStructure_ReverseIterator<
-                    typename __DataStructure_TemplateTypeTraits<iteratorType>::template __result<
-                                valueType,
-                                typename __DataStructure_ConstOrNonConst<reference>::__result,
-                                typename __DataStructure_ConstOrNonConst<pointer>::__result
-                             >
-                 >() const noexcept {
-            return __DataStructure_ReverseIterator<
-                        typename __DataStructure_TemplateTypeTraits<iteratorType>::template __result<
-                                valueType,
-                                typename __DataStructure_ConstOrNonConst<reference>::__result,
-                                typename __DataStructure_ConstOrNonConst<pointer>::__result
-                        >
-                   >(
-                           static_cast<typename __DataStructure_TemplateTypeTraits<iteratorType>::
-                                   template __result<valueType,
-                                       typename __DataStructure_ConstOrNonConst<reference>::__result,
-                                       typename __DataStructure_ConstOrNonConst<pointer>::__result
-                                   >>(this->iterator)
-                   );
+        operator __DataStructure_ReverseIterator<reverseType, Iterator>() const noexcept {
+            return __DataStructure_ReverseIterator<reverseType, Iterator>(this->iterator);
         }
     };
     template <typename T, typename Ref, typename Ptr>
@@ -514,6 +497,153 @@ namespace DataStructure {
         bool operator>=(const thisType &) const noexcept = delete;
         explicit operator bool() const noexcept {
             return static_cast<bool>(this->iterator);
+        }
+    };
+    template <typename T, typename Ref, typename Ptr, typename Allocator>
+    class __DataStructure_DequeIterator final {
+    private:
+        using thisType = __DataStructure_DequeIterator;
+        using allocatorType = Allocator;
+        using buffer = allocatorType *;
+    public:
+        using sizeType = unsigned long;
+        using differenceType = long;
+        using valueType = T;
+        using reference = Ref;
+        using constReference = const valueType &;
+        using rightValueReference = valueType &&;
+        using pointer = Ptr;
+        using constPointer = const valueType *;
+        using iteratorTag = RandomAccessIterator;
+    private:
+        buffer node;
+        pointer iterator;
+    public:
+        constexpr __DataStructure_DequeIterator() : node {nullptr}, iterator {nullptr} {}
+        __DataStructure_DequeIterator(pointer iterator, buffer node) : node {node}, iterator {iterator} {}
+        __DataStructure_DequeIterator(const thisType &) = default;
+        __DataStructure_DequeIterator(thisType &&) noexcept = default;
+        ~__DataStructure_DequeIterator() = default;
+    public:
+        __DataStructure_DequeIterator &operator=(const thisType &) = default;
+        __DataStructure_DequeIterator &operator=(thisType &&) noexcept = default;
+        reference operator*() const noexcept {
+            return *this->iterator;
+        }
+        pointer operator->() const noexcept {
+            return &**this;
+        }
+        differenceType operator-(const thisType &rhs) const noexcept {
+            return static_cast<differenceType>(this->node->capacity()) * (this->node - rhs.node - 1) +
+                    this->iterator - this->node->begin() + rhs.node->end() - rhs.iterator;
+        }
+        thisType &operator++() noexcept {
+            if(++this->iterator < this->node->end()) {
+                return *this;
+            }
+            ++this->node;
+            this->iterator = this->node->begin();
+            return *this;
+        }
+        thisType operator++(int) noexcept {
+            auto temp {*this};
+            ++*this;
+            return temp;
+        }
+        thisType &operator--() noexcept {
+            if(--this->iterator >= this->node->begin()) {
+                return *this;
+            }
+            --this->node;
+            this->iterator = this->node->end() - static_cast<differenceType>(1);
+            return *this;
+        }
+        thisType operator--(int) noexcept {
+            auto temp {*this};
+            --*this;
+            return temp;
+        }
+        thisType &operator+=(differenceType n) noexcept {
+            const auto offset {n + (this->iterator - this->node->begin())};
+            const auto size {static_cast<differenceType>(this->node->capacity())};
+            if(offset >= 0 and offset < size) {
+                this->iterator += n;
+                return *this;
+            }
+            const auto nodeOffset {offset > 0 ? offset / size : -((-offset - 1) / size) - 1};
+            this->node += nodeOffset;
+            this->iterator = this->node->begin() + (offset - nodeOffset * size);
+            return *this;
+        }
+        thisType &operator-=(differenceType n) noexcept {
+            return *this += -n;
+        }
+        thisType operator+(differenceType n) const noexcept {
+            auto temp {*this};
+            return temp += n;
+        }
+        thisType operator-(differenceType n) const noexcept {
+            return *this + -n;
+        }
+        reference operator[](differenceType n) const noexcept {
+            return *(*this + n);
+        }
+        bool operator==(const thisType &rhs) const noexcept {
+            return this->iterator == rhs.iterator and this->node == rhs.node;
+        }
+        bool operator!=(const thisType &rhs) const noexcept {
+            return not(*this == rhs);
+        }
+        bool operator<(const thisType &rhs) const noexcept {
+            return this->node == rhs.node ? this->iterator < rhs.iterator : this->node < rhs.node;
+        }
+        bool operator<=(const thisType &rhs) const noexcept {
+            return *this < rhs or *this == rhs;
+        }
+        bool operator>(const thisType &rhs) const noexcept {
+            return not(*this <= rhs);
+        }
+        bool operator>=(const thisType &rhs) const noexcept {
+            return not(*this < rhs);
+        }
+        explicit operator bool() const noexcept {
+            return static_cast<bool>(this->iterator);
+        }
+        operator __DataStructure_DequeIterator<valueType,
+                    typename __DataStructure_ConstOrNonConst<reference>::__result,
+                    typename __DataStructure_ConstOrNonConst<pointer>::__result, allocatorType
+                 >() const noexcept {
+            return __DataStructure_DequeIterator<valueType,
+                        typename __DataStructure_ConstOrNonConst<reference>::__result,
+                        typename __DataStructure_ConstOrNonConst<pointer>::__result, allocatorType
+                   >(reinterpret_cast<
+                           typename __DataStructure_ConstOrNonConst<pointer>::__result
+                     >(this->iterator), this->node);
+        }
+    public:
+        thisType &construct(constReference value) noexcept(static_cast<bool>(
+                typename __DataStructure_TypeTraits<valueType>::hasTrivialCopyConstructor())
+        ) {
+            this->node->construct(this->iterator, value);
+            return *this;
+        }
+        thisType &construct(rightValueReference value) noexcept(static_cast<bool>(
+                typename __DataStructure_TypeTraits<valueType>::hasTrivialMoveConstructor())
+        ) {
+            this->node->construct(this->iterator, value);
+            return *this;
+        }
+        template <typename ...Args>
+        thisType &construct(Args &&...args) noexcept(static_cast<bool>(
+                typename __DataStructure_TypeTraits<valueType>::hasTrivialMoveConstructor())
+        ) {
+            return this->construct(valueType(forward<Args>(args)...));
+        }
+        thisType &destroy() noexcept(static_cast<bool>(
+                typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+        ) {
+            this->node->destroy(this->iterator);
+            return *this;
         }
     };
 }
