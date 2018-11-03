@@ -19,8 +19,8 @@ namespace DataStructure {
         using constPointer = typename allocator::constPointer;
         using iterator = __DataStructure_WrapIterator<valueType, reference, pointer>;
         using constIterator = __DataStructure_WrapIterator<valueType, constReference, constPointer>;
-        using reverseIterator = __DataStructure_ReverseIterator<iterator>;
-        using constReverseIterator = __DataStructure_ReverseIterator<constIterator>;
+        using reverseIterator = __DataStructure_ReverseIterator<iterator, constIterator>;
+        using constReverseIterator = __DataStructure_ReverseIterator<constIterator, iterator>;
     private:
         allocator alloc;
     private:
@@ -111,9 +111,15 @@ namespace DataStructure {
                        );
         iterator insert(constIterator, std::initializer_list<valueType>);
         iterator insert(differenceType, std::initializer_list<valueType>);
-        iterator erase(constIterator, sizeType = 1);
-        iterator erase(differenceType, sizeType = 1);
-        iterator erase(constIterator, constIterator);
+        iterator erase(constIterator, sizeType = 1) noexcept(
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+        );
+        iterator erase(differenceType, sizeType = 1) noexcept(
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+        );
+        iterator erase(constIterator, constIterator) noexcept(
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+        );
         void pushBack(constReference);
         void pushBack(rightValueReference);
         void pushFront(constReference);
@@ -123,13 +129,17 @@ namespace DataStructure {
 #else
         void
 #endif
-        popFront();
+        popFront() noexcept(
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+        );
 #ifdef POP_GET_OBJECT
         valueType
 #else
         void
 #endif
-        popBack();
+        popBack() noexcept(
+                static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+        );
         template <typename ...Args>
         iterator emplace(constIterator, Args &&...);
         template <typename ...Args>
@@ -139,8 +149,6 @@ namespace DataStructure {
         template <typename ...Args>
         void emplaceFront(Args &&...);
         void swap(Vector &) noexcept;
-        Vector get(differenceType, sizeType) const;
-        Vector get(constIterator, sizeType) const;
         allocator getAllocator() const &;
 #ifdef DEBUG_DATA_STRUCTURE_FOR_VECTOR
     public:
@@ -468,12 +476,12 @@ template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
 DataStructure::Vector<T, Allocator>::insert(differenceType index, rightValueReference value) {
     if(index == this->size()) {
-        this->pushBack(value);
+        this->pushBack(move(value));
         return iterator(this->alloc.begin() + index);
     }
     auto insertPosition {this->insertAuxiliary(index, 1)};
     auto cursor {insertPosition};
-    this->alloc.construct(cursor, value);
+    this->alloc.construct(cursor, move(value));
     return iterator(insertPosition);
 }
 template <typename T, typename Allocator>
@@ -484,7 +492,7 @@ DataStructure::Vector<T, Allocator>::insert(constIterator position, constReferen
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
 DataStructure::Vector<T, Allocator>::insert(constIterator position, rightValueReference value) {
-    return this->insert(position - constIterator(this->alloc.begin()), value);
+    return this->insert(position - constIterator(this->alloc.begin()), move(value));
 }
 template <typename T, typename Allocator>
 template <typename InputIterator,
@@ -498,7 +506,7 @@ DataStructure::Vector<T, Allocator>::insert(
     if(first == last) {
         return iterator(this->alloc.begin() + index);
     }
-    if(index == this->size) {
+    if(index == this->size()) {
         while(first not_eq last) {
             this->pushBack(static_cast<valueType>(*first++));
         }
@@ -539,7 +547,9 @@ DataStructure::Vector<T, Allocator>::insert(
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
-DataStructure::Vector<T, Allocator>::erase(differenceType index, sizeType size) {
+DataStructure::Vector<T, Allocator>::erase(differenceType index, sizeType size) noexcept(
+        static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
     auto erasePosition {this->alloc.begin() + index};
     if(not size) {
         return iterator(erasePosition);
@@ -563,12 +573,16 @@ DataStructure::Vector<T, Allocator>::erase(differenceType index, sizeType size) 
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
-DataStructure::Vector<T, Allocator>::erase(constIterator position, sizeType size) {
+DataStructure::Vector<T, Allocator>::erase(constIterator position, sizeType size) noexcept(
+        static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
     return this->erase(position - constIterator(this->alloc.begin()), size);
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::iterator
-DataStructure::Vector<T, Allocator>::erase(constIterator first, constIterator last) {
+DataStructure::Vector<T, Allocator>::erase(constIterator first, constIterator last) noexcept(
+        static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
     return this->erase(first, last - first);
 }
 template <typename T, typename Allocator>
@@ -579,7 +593,7 @@ void DataStructure::Vector<T, Allocator>::pushBack(constReference value) {
 template <typename T, typename Allocator>
 void DataStructure::Vector<T, Allocator>::pushBack(rightValueReference value) {
     this->checkAllocator(this->size() + 1);
-    this->alloc.construct(this->alloc.getCursor(), value);
+    this->alloc.construct(this->alloc.getCursor(), move(value));
 }
 template <typename T, typename Allocator>
 void DataStructure::Vector<T, Allocator>::pushFront(constReference value) {
@@ -587,7 +601,7 @@ void DataStructure::Vector<T, Allocator>::pushFront(constReference value) {
 }
 template <typename T, typename Allocator>
 void DataStructure::Vector<T, Allocator>::pushFront(rightValueReference value) {
-    this->insert(0, value);
+    this->insert(0, move(value));
 }
 template <typename T, typename Allocator>
 #ifdef POP_GET_OBJECT
@@ -595,7 +609,9 @@ typename DataStructure::Vector<T, Allocator>::valueType
 #else
 void
 #endif
-DataStructure::Vector<T, Allocator>::popBack() {
+DataStructure::Vector<T, Allocator>::popBack() noexcept(
+        static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
     if(this->empty()) {
 #ifdef POP_GET_OBJECT
         return valueType();
@@ -616,7 +632,9 @@ typename DataStructure::Vector<T, Allocator>::valueType
 #else
 void
 #endif
-DataStructure::Vector<T, Allocator>::popFront() {
+DataStructure::Vector<T, Allocator>::popFront()noexcept(
+        static_cast<bool>(typename __DataStructure_TypeTraits<valueType>::hasTrivialDestructor())
+) {
     if(this->empty()) {
 #ifdef POP_GET_OBJECT
         return valueType();
@@ -656,17 +674,6 @@ void DataStructure::Vector<T, Allocator>::emplaceFront(Args &&...args) {
 template <typename T, typename Allocator>
 void DataStructure::Vector<T, Allocator>::swap(Vector &rhs) noexcept {
     this->alloc.swap(rhs.alloc);
-}
-template <typename T, typename Allocator>
-DataStructure::Vector<T, Allocator>
-DataStructure::Vector<T, Allocator>::get(differenceType index, sizeType size) const {
-    const auto start {this->begin() + index};
-    return Vector(start, start + size);
-}
-template <typename T, typename Allocator>
-DataStructure::Vector<T, Allocator>
-DataStructure::Vector<T, Allocator>::get(constIterator position, sizeType size) const {
-    return Vector(position, position + size);
 }
 template <typename T, typename Allocator>
 typename DataStructure::Vector<T, Allocator>::allocator
