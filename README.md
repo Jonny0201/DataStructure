@@ -4,7 +4,7 @@ Project Name : Data Structure
 
 ## Introduction
 
-**[warning] The programming has been deprecated, please move to https://github.com/Jonny0201/data_structure.**
+**[warning] The programme has been deprecated, please move to https://github.com/Jonny0201/data_structure.**
 
 Data structure is the base of the computer programming.
 
