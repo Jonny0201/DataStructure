@@ -130,4 +130,4 @@ If you find any error in the `Queue`, please tell me!
 
 > Data Structure
 
-> Copyright © 2018 [Jonny Charlotte](https://jonny.vip)
+> Copyright © 2018 [Jonny Charlotte](https://github.com/Jonny0201)
