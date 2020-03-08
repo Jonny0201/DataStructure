@@ -115,4 +115,4 @@ The programme is based on C++ 11. So when you compile, you should add the comman
 
 > Project : Data Structure
 
-> Copyright © 2018 [Jonny Charlotte](https://jonny.vip)
+> Copyright © 2018 [Jonny Charlotte](https://github.com/Jonny0201)
