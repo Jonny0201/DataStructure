@@ -256,4 +256,4 @@ Now the function that is able to find a series of numbers comes back!
 
 > Data Structure
 
-> Copyright © 2018 [Jonny Charlotte](https://jonny.vip)
+> Copyright © 2018 [Jonny Charlotte](https://github.com/Jonny0201)
